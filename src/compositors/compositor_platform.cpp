@@ -45,7 +45,8 @@ namespace compositors {
 namespace {
 
   void appendHyprlandExtOnlyWindows(std::vector<ToplevelInfo>& windows, const std::vector<ToplevelInfo>& extWindows,
-                                    const compositors::hyprland::HyprlandToplevelMapping& mapping) {
+                                    const compositors::hyprland::HyprlandToplevelMapping& mapping,
+                                    const std::unordered_set<std::string>* outputWindowIds) {
     std::unordered_set<std::string> wlrRepresentedIds;
     wlrRepresentedIds.reserve(windows.size());
     for (const auto& window : windows) {
@@ -74,6 +75,12 @@ namespace {
         if (!normalized.empty() && wlrRepresentedIds.contains(normalized)) {
           continue;
         }
+        // ext_foreign_toplevel_list has no per-output metadata; scope to this bar's monitor via IPC.
+        if (outputWindowIds != nullptr && (normalized.empty() || !outputWindowIds->contains(normalized))) {
+          continue;
+        }
+      } else if (outputWindowIds != nullptr) {
+        continue;
       }
       windows.push_back(extWindow);
     }
@@ -421,7 +428,18 @@ std::vector<ToplevelInfo> CompositorPlatform::windowsForApp(const std::string& i
     return windows;
   }
 
-  appendHyprlandExtOnlyWindows(windows, m_wayland.extWindowsForApp(idLower, wmClassLower), *m_hyprlandToplevelMapping);
+  std::unordered_set<std::string> outputWindowIds;
+  if (outputFilter != nullptr && m_workspaces != nullptr) {
+    for (const auto& row : m_workspaces->workspaceWindows(outputFilter)) {
+      const auto normalized = compositors::hyprland::normalizeWindowId(row.windowId);
+      if (!normalized.empty()) {
+        outputWindowIds.insert(normalized);
+      }
+    }
+  }
+
+  appendHyprlandExtOnlyWindows(windows, m_wayland.extWindowsForApp(idLower, wmClassLower), *m_hyprlandToplevelMapping,
+                               outputFilter != nullptr ? &outputWindowIds : nullptr);
   return windows;
 }
 
