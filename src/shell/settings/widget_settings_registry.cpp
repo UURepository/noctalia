@@ -684,6 +684,8 @@ namespace settings {
         add(std::move(groupCapsule));
       }
       add(boolSpec("show_active_indicator", true));
+      add(doubleSpec("active_opacity", 1.0, 0.0, 1.0, 0.01));
+      add(doubleSpec("inactive_opacity", 1.0, 0.0, 1.0, 0.01));
       const WidgetSettingVisibility groupedWorkspaceSettings{
           WidgetSettingVisibilityCondition{"group_by_workspace", {"true"}}
       };

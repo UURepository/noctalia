@@ -1290,6 +1290,14 @@
           "label": "Active Window Indicator",
           "description": "Show a small dot below the active window icon in the taskbar."
         },
+        "active_opacity": {
+          "label": "Active Icon Opacity",
+          "description": "Opacity of the icon for the active (focused) window."
+        },
+        "inactive_opacity": {
+          "label": "Inactive Icon Opacity",
+          "description": "Opacity of icons for inactive (unfocused) windows."
+        },
         "height": {
           "label": "Height",
           "description": "Widget height in pixels"

@@ -145,18 +145,19 @@ namespace {
 TaskbarWidget::TaskbarWidget(
     CompositorPlatform& platform, wl_output* output, bool groupByWorkspace, bool showAllOutputs,
     bool onlyActiveWorkspace, bool showWorkspaceLabel, WorkspaceLabelPlacement workspaceLabelPlacement,
-    bool hideEmptyWorkspaces, bool workspaceGroupCapsule, bool showActiveIndicator, ColorSpec focusedColor,
-    ColorSpec occupiedColor, ColorSpec emptyColor, bool showWindowTitle, float windowTitleMaxWidth,
-    std::string barPosition, ShellConfig::ShadowConfig shadowConfig
+    bool hideEmptyWorkspaces, bool workspaceGroupCapsule, bool showActiveIndicator, float activeOpacity,
+    float inactiveOpacity, ColorSpec focusedColor, ColorSpec occupiedColor, ColorSpec emptyColor,
+    bool showWindowTitle, float windowTitleMaxWidth, std::string barPosition,
+    ShellConfig::ShadowConfig shadowConfig
 )
     : m_platform(platform), m_output(output), m_groupByWorkspace(groupByWorkspace), m_showAllOutputs(showAllOutputs),
       m_onlyActiveWorkspace(onlyActiveWorkspace), m_showWorkspaceLabel(showWorkspaceLabel),
       m_workspaceLabelPlacement(workspaceLabelPlacement), m_hideEmptyWorkspaces(hideEmptyWorkspaces),
       m_workspaceGroupCapsule(workspaceGroupCapsule), m_showActiveIndicator(showActiveIndicator),
-      m_focusedColor(std::move(focusedColor)), m_occupiedColor(std::move(occupiedColor)),
-      m_emptyColor(std::move(emptyColor)), m_showWindowTitle(showWindowTitle),
-      m_windowTitleMaxWidth(windowTitleMaxWidth), m_barPosition(std::move(barPosition)),
-      m_shadowConfig(std::move(shadowConfig)) {
+      m_activeOpacity(activeOpacity), m_inactiveOpacity(inactiveOpacity), m_focusedColor(std::move(focusedColor)),
+      m_occupiedColor(std::move(occupiedColor)), m_emptyColor(std::move(emptyColor)),
+      m_showWindowTitle(showWindowTitle), m_windowTitleMaxWidth(windowTitleMaxWidth),
+      m_barPosition(std::move(barPosition)), m_shadowConfig(std::move(shadowConfig)) {
   // Window title not implemented for vertical bars or workspace grouping.
   if (m_barPosition == "left" || m_barPosition == "right" || m_groupByWorkspace) {
     m_showWindowTitle = false;
@@ -306,6 +307,7 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
   auto createTaskTile = [&](const TaskModel& task) {
     auto area = std::make_unique<InputArea>();
     area->setFrameSize(tileWidthWithTitle, tileSize);
+    area->setOpacity(task.active ? m_activeOpacity : m_inactiveOpacity);
     area->setAcceptedButtons(InputArea::buttonMask({BTN_LEFT, BTN_RIGHT}));
     area->setOnAxisHandler(workspaceAxisHandler);
 
