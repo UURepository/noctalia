@@ -13,16 +13,9 @@
 #include "theme/community_palettes.h"
 #include "theme/community_templates.h"
 #include "theme/custom_palettes.h"
+#include "ui/builders.h"
 #include "ui/controls/box.h"
-#include "ui/controls/button.h"
-#include "ui/controls/flex.h"
-#include "ui/controls/input.h"
-#include "ui/controls/label.h"
-#include "ui/controls/scroll_view.h"
 #include "ui/controls/select_dropdown_popup.h"
-#include "ui/controls/separator.h"
-#include "ui/controls/spacer.h"
-#include "ui/controls/toggle.h"
 #include "ui/palette.h"
 #include "ui/style.h"
 #include "util/string_utils.h"
@@ -74,23 +67,23 @@ namespace {
 
   std::unique_ptr<Label> makeLabel(std::string_view text, float fontSize, const ColorSpec& color,
                                    FontWeight fontWeight = FontWeight::Normal) {
-    auto label = std::make_unique<Label>();
-    label->setText(text);
-    label->setFontSize(fontSize);
-    label->setColor(color);
-    label->setFontWeight(fontWeight);
-    return label;
+    return ui::label({
+        .text = std::string(text),
+        .fontSize = fontSize,
+        .color = color,
+        .fontWeight = fontWeight,
+    });
   }
 
   std::unique_ptr<Flex> centeredRow(std::unique_ptr<Flex> child, float scale) {
     child->setFlexGrow(1.0f);
     child->setMaxWidth(kBodyMaxWidth * scale);
-    auto row = std::make_unique<Flex>();
-    row->setDirection(FlexDirection::Horizontal);
-    row->setAlign(FlexAlign::Stretch);
-    row->setJustify(FlexJustify::Center);
-    row->addChild(std::move(child));
-    return row;
+    return ui::row(
+        {
+            .align = FlexAlign::Stretch,
+            .justify = FlexJustify::Center,
+        },
+        std::move(child));
   }
 
   std::vector<std::string> sectionKeys(const std::vector<settings::SettingEntry>& entries) {
@@ -479,44 +472,46 @@ void SettingsWindow::rebuildSettingsContent() {
 }
 
 std::unique_ptr<Flex> SettingsWindow::buildHeaderRow(float scale) {
-  auto header = std::make_unique<Flex>();
-  header->setDirection(FlexDirection::Horizontal);
-  header->setAlign(FlexAlign::Center);
-  header->setJustify(FlexJustify::SpaceBetween);
-  header->setGap(Style::spaceSm * scale);
-
-  auto headerTitle = std::make_unique<Label>();
-  headerTitle->setText(i18n::tr("settings.window.title"));
-  headerTitle->setFontWeight(FontWeight::Bold);
-  headerTitle->setFontSize(Style::fontSizeTitle * scale);
-  headerTitle->setColor(colorSpecFromRole(ColorRole::OnSurface));
-  headerTitle->setFlexGrow(1.0f);
-  header->addChild(std::move(headerTitle));
-
-  auto actionsMenuBtn = std::make_unique<Button>();
-  actionsMenuBtn->setGlyph("more-vertical");
-  actionsMenuBtn->setVariant(ButtonVariant::Ghost);
-  actionsMenuBtn->setGlyphSize(Style::fontSizeBody * scale);
-  actionsMenuBtn->setMinWidth(Style::controlHeightSm * scale);
-  actionsMenuBtn->setMinHeight(Style::controlHeightSm * scale);
-  actionsMenuBtn->setPadding(Style::spaceXs * scale);
-  actionsMenuBtn->setRadius(Style::scaledRadiusMd(scale));
-  actionsMenuBtn->setOnClick([this]() { openActionsMenu(); });
-  m_actionsMenuButton = actionsMenuBtn.get();
-  header->addChild(std::move(actionsMenuBtn));
-
-  auto closeBtn = std::make_unique<Button>();
-  closeBtn->setGlyph("close");
-  closeBtn->setVariant(ButtonVariant::Default);
-  closeBtn->setGlyphSize(Style::fontSizeBody * scale);
-  closeBtn->setMinWidth(Style::controlHeightSm * scale);
-  closeBtn->setMinHeight(Style::controlHeightSm * scale);
-  closeBtn->setPadding(Style::spaceXs * scale);
-  closeBtn->setRadius(Style::scaledRadiusMd(scale));
-  closeBtn->setOnClick([this]() { close(); });
-  header->addChild(std::move(closeBtn));
-
-  return header;
+  return ui::row(
+      {
+          .align = FlexAlign::Center,
+          .justify = FlexJustify::SpaceBetween,
+          .gap = Style::spaceSm * scale,
+      },
+      ui::label({
+          .text = i18n::tr("settings.window.title"),
+          .fontSize = Style::fontSizeTitle * scale,
+          .color = colorSpecFromRole(ColorRole::OnSurface),
+          .fontWeight = FontWeight::Bold,
+          .flexGrow = 1.0f,
+      }),
+      ui::button({
+          .out = &m_actionsMenuButton,
+          .glyph = "more-vertical",
+          .glyphSize = Style::fontSizeBody * scale,
+          .variant = ButtonVariant::Ghost,
+          .onClick = [this]() { openActionsMenu(); },
+          .configure =
+              [scale](Button& button) {
+                button.setMinWidth(Style::controlHeightSm * scale);
+                button.setMinHeight(Style::controlHeightSm * scale);
+                button.setPadding(Style::spaceXs * scale);
+                button.setRadius(Style::scaledRadiusMd(scale));
+              },
+      }),
+      ui::button({
+          .glyph = "close",
+          .glyphSize = Style::fontSizeBody * scale,
+          .variant = ButtonVariant::Default,
+          .onClick = [this]() { close(); },
+          .configure =
+              [scale](Button& button) {
+                button.setMinWidth(Style::controlHeightSm * scale);
+                button.setMinHeight(Style::controlHeightSm * scale);
+                button.setPadding(Style::spaceXs * scale);
+                button.setRadius(Style::scaledRadiusMd(scale));
+              },
+      }));
 }
 
 std::unique_ptr<Flex> SettingsWindow::buildFilterRow(float scale, const std::string& resetPageScope,
@@ -526,100 +521,108 @@ std::unique_ptr<Flex> SettingsWindow::buildFilterRow(float scale, const std::str
     clearSettingOverrides(std::move(paths));
   };
 
-  auto filters = std::make_unique<Flex>();
-  filters->setDirection(FlexDirection::Horizontal);
-  filters->setAlign(FlexAlign::Center);
-  filters->setJustify(FlexJustify::Start);
-  filters->setGap(Style::spaceMd * scale);
-
-  auto searchInput = std::make_unique<Input>();
-  searchInput->setPlaceholder(i18n::tr("settings.window.search-placeholder"));
-  searchInput->setValue(m_searchQuery);
-  searchInput->setFontSize(Style::fontSizeBody * scale);
-  searchInput->setControlHeight(Style::controlHeight * scale);
-  searchInput->setHorizontalPadding(Style::spaceSm * scale);
-  searchInput->setClearButtonEnabled(true);
-  searchInput->setSize(320.0f * scale, Style::controlHeight * scale);
-  Input* searchInputPtr = searchInput.get();
-  searchInput->setOnChange([this](const std::string& value) {
-    const bool wasSearchActive = !m_searchQuery.empty();
-    m_searchQuery = value;
-    const bool searchActiveChanged = wasSearchActive != !m_searchQuery.empty();
-    const bool hadPendingReset = !m_pendingResetPageScope.empty();
-    m_pendingResetPageScope.clear();
-
-    if (hadPendingReset || searchActiveChanged) {
-      m_focusSearchOnRebuild = true;
-      requestSceneRebuild();
-    } else {
-      requestContentRebuild();
-    }
+  auto filters = ui::row({
+      .align = FlexAlign::Center,
+      .justify = FlexJustify::Start,
+      .gap = Style::spaceMd * scale,
   });
-  filters->addChild(std::move(searchInput));
-  filters->addChild(std::make_unique<Spacer>());
+
+  Input* searchInputPtr = nullptr;
+  filters->addChild(ui::input({
+      .out = &searchInputPtr,
+      .value = m_searchQuery,
+      .placeholder = i18n::tr("settings.window.search-placeholder"),
+      .fontSize = Style::fontSizeBody * scale,
+      .controlHeight = Style::controlHeight * scale,
+      .horizontalPadding = Style::spaceSm * scale,
+      .clearButtonEnabled = true,
+      .width = 320.0f * scale,
+      .height = Style::controlHeight * scale,
+      .onChange =
+          [this](const std::string& value) {
+            const bool wasSearchActive = !m_searchQuery.empty();
+            m_searchQuery = value;
+            const bool searchActiveChanged = wasSearchActive != !m_searchQuery.empty();
+            const bool hadPendingReset = !m_pendingResetPageScope.empty();
+            m_pendingResetPageScope.clear();
+
+            if (hadPendingReset || searchActiveChanged) {
+              m_focusSearchOnRebuild = true;
+              requestSceneRebuild();
+            } else {
+              requestContentRebuild();
+            }
+          },
+  }));
+  filters->addChild(ui::spacer());
 
   auto advancedLabel = makeLabel(i18n::tr("settings.badges.advanced"), Style::fontSizeBody * scale,
                                  colorSpecFromRole(ColorRole::OnSurfaceVariant), FontWeight::Normal);
   filters->addChild(std::move(advancedLabel));
 
-  auto advancedToggle = std::make_unique<Toggle>();
-  advancedToggle->setScale(scale);
-  advancedToggle->setChecked(m_showAdvanced);
-  advancedToggle->setOnChange([this, requestRebuild](bool value) {
-    if (m_config != nullptr && !m_config->setOverride({"shell", "settings_show_advanced"}, value)) {
-      markSettingsWriteError(i18n::tr("settings.errors.write"));
-      return;
-    }
-    m_showAdvanced = value;
-    const bool hadPendingReset = !m_pendingResetPageScope.empty();
-    m_pendingResetPageScope.clear();
-    if (hadPendingReset) {
-      requestRebuild();
-    } else {
-      requestContentRebuild();
-    }
-  });
-  filters->addChild(std::move(advancedToggle));
+  filters->addChild(ui::toggle({
+      .checked = m_showAdvanced,
+      .scale = scale,
+      .onChange =
+          [this, requestRebuild](bool value) {
+            if (m_config != nullptr && !m_config->setOverride({"shell", "settings_show_advanced"}, value)) {
+              markSettingsWriteError(i18n::tr("settings.errors.write"));
+              return;
+            }
+            m_showAdvanced = value;
+            const bool hadPendingReset = !m_pendingResetPageScope.empty();
+            m_pendingResetPageScope.clear();
+            if (hadPendingReset) {
+              requestRebuild();
+            } else {
+              requestContentRebuild();
+            }
+          },
+  }));
 
   auto overriddenLabel = makeLabel(i18n::tr("settings.window.filter-modified"), Style::fontSizeBody * scale,
                                    colorSpecFromRole(ColorRole::OnSurfaceVariant), FontWeight::Normal);
   filters->addChild(std::move(overriddenLabel));
 
-  auto overriddenToggle = std::make_unique<Toggle>();
-  overriddenToggle->setScale(scale);
-  overriddenToggle->setChecked(m_showOverriddenOnly);
-  overriddenToggle->setOnChange([this, requestRebuild](bool value) {
-    m_showOverriddenOnly = value;
-    const bool hadPendingReset = !m_pendingResetPageScope.empty();
-    m_pendingResetPageScope.clear();
-    if (hadPendingReset) {
-      requestRebuild();
-    } else {
-      requestContentRebuild();
-    }
-  });
-  filters->addChild(std::move(overriddenToggle));
+  filters->addChild(ui::toggle({
+      .checked = m_showOverriddenOnly,
+      .scale = scale,
+      .onChange =
+          [this, requestRebuild](bool value) {
+            m_showOverriddenOnly = value;
+            const bool hadPendingReset = !m_pendingResetPageScope.empty();
+            m_pendingResetPageScope.clear();
+            if (hadPendingReset) {
+              requestRebuild();
+            } else {
+              requestContentRebuild();
+            }
+          },
+  }));
 
   if (!resetPagePaths.empty()) {
     const bool pendingReset = m_pendingResetPageScope == resetPageScope;
-    auto resetPageBtn = std::make_unique<Button>();
-    resetPageBtn->setText(pendingReset ? i18n::tr("settings.window.reset-page-confirm")
-                                       : i18n::tr("settings.window.reset-page"));
-    resetPageBtn->setVariant(pendingReset ? ButtonVariant::Destructive : ButtonVariant::Ghost);
-    resetPageBtn->setFontSize(Style::fontSizeCaption * scale);
-    resetPageBtn->setMinHeight(Style::controlHeightSm * scale);
-    resetPageBtn->setPadding(Style::spaceXs * scale, Style::spaceSm * scale);
-    resetPageBtn->setRadius(Style::scaledRadiusMd(scale));
-    resetPageBtn->setOnClick([this, resetPageScope, resetPagePaths = std::move(resetPagePaths), requestRebuild,
-                              clearOverrides, pendingReset]() mutable {
-      if (!pendingReset) {
-        m_pendingResetPageScope = resetPageScope;
-        requestRebuild();
-        return;
-      }
-      clearOverrides(std::move(resetPagePaths));
-    });
-    filters->addChild(std::move(resetPageBtn));
+    filters->addChild(ui::button({
+        .text = pendingReset ? i18n::tr("settings.window.reset-page-confirm") : i18n::tr("settings.window.reset-page"),
+        .fontSize = Style::fontSizeCaption * scale,
+        .variant = pendingReset ? ButtonVariant::Destructive : ButtonVariant::Ghost,
+        .onClick =
+            [this, resetPageScope, resetPagePaths = std::move(resetPagePaths), requestRebuild, clearOverrides,
+             pendingReset]() mutable {
+              if (!pendingReset) {
+                m_pendingResetPageScope = resetPageScope;
+                requestRebuild();
+                return;
+              }
+              clearOverrides(std::move(resetPagePaths));
+            },
+        .configure =
+            [scale](Button& button) {
+              button.setMinHeight(Style::controlHeightSm * scale);
+              button.setPadding(Style::spaceXs * scale, Style::spaceSm * scale);
+              button.setRadius(Style::scaledRadiusMd(scale));
+            },
+    }));
   }
 
   if (m_focusSearchOnRebuild && searchInputPtr != nullptr && searchInputPtr->inputArea() != nullptr) {
@@ -638,15 +641,18 @@ std::unique_ptr<Flex> SettingsWindow::buildStatusRow(float scale) {
   const auto requestRebuild = [this]() { requestSceneRebuild(); };
   const auto clearStatus = [this]() { clearStatusMessage(); };
 
-  auto status = std::make_unique<Flex>();
-  status->setDirection(FlexDirection::Horizontal);
-  status->setAlign(FlexAlign::Center);
-  status->setGap(Style::spaceSm * scale);
-  status->setPadding(Style::spaceXs * scale, Style::spaceSm * scale);
-  status->setRadius(Style::scaledRadiusMd(scale));
-  status->setFill(colorSpecFromRole(m_statusIsError ? ColorRole::Error : ColorRole::Secondary, 0.14f));
-  status->setBorder(colorSpecFromRole(m_statusIsError ? ColorRole::Error : ColorRole::Secondary, 0.45f),
-                    Style::borderWidth);
+  auto status = ui::row({
+      .align = FlexAlign::Center,
+      .gap = Style::spaceSm * scale,
+      .configure =
+          [this, scale](Flex& row) {
+            row.setPadding(Style::spaceXs * scale, Style::spaceSm * scale);
+            row.setRadius(Style::scaledRadiusMd(scale));
+            row.setFill(colorSpecFromRole(m_statusIsError ? ColorRole::Error : ColorRole::Secondary, 0.14f));
+            row.setBorder(colorSpecFromRole(m_statusIsError ? ColorRole::Error : ColorRole::Secondary, 0.45f),
+                          Style::borderWidth);
+          },
+  });
 
   auto message =
       makeLabel(m_statusMessage, Style::fontSizeCaption * scale,
@@ -654,19 +660,23 @@ std::unique_ptr<Flex> SettingsWindow::buildStatusRow(float scale) {
   message->setFlexGrow(1.0f);
   status->addChild(std::move(message));
 
-  auto dismiss = std::make_unique<Button>();
-  dismiss->setGlyph("close");
-  dismiss->setVariant(ButtonVariant::Ghost);
-  dismiss->setGlyphSize(Style::fontSizeCaption * scale);
-  dismiss->setMinWidth(Style::controlHeightSm * scale);
-  dismiss->setMinHeight(Style::controlHeightSm * scale);
-  dismiss->setPadding(Style::spaceXs * scale);
-  dismiss->setRadius(Style::scaledRadiusSm(scale));
-  dismiss->setOnClick([clearStatus, requestRebuild]() {
-    clearStatus();
-    requestRebuild();
-  });
-  status->addChild(std::move(dismiss));
+  status->addChild(ui::button({
+      .glyph = "close",
+      .glyphSize = Style::fontSizeCaption * scale,
+      .variant = ButtonVariant::Ghost,
+      .onClick =
+          [clearStatus, requestRebuild]() {
+            clearStatus();
+            requestRebuild();
+          },
+      .configure =
+          [scale](Button& button) {
+            button.setMinWidth(Style::controlHeightSm * scale);
+            button.setMinHeight(Style::controlHeightSm * scale);
+            button.setPadding(Style::spaceXs * scale);
+            button.setRadius(Style::scaledRadiusSm(scale));
+          },
+  }));
 
   return status;
 }
@@ -682,10 +692,10 @@ std::unique_ptr<Flex> SettingsWindow::buildBody(float scale, const Config& cfg,
   const auto clearTransientSettingsState = [this]() { this->clearTransientSettingsState(); };
   const auto clearSearchQuery = [this]() { m_searchQuery.clear(); };
 
-  auto body = std::make_unique<Flex>();
-  body->setDirection(FlexDirection::Horizontal);
-  body->setAlign(FlexAlign::Stretch);
-  body->setGap(Style::spaceMd * scale);
+  auto body = ui::row({
+      .align = FlexAlign::Stretch,
+      .gap = Style::spaceMd * scale,
+  });
 
   auto sidebar = settings::buildSettingsSidebar(settings::SettingsSidebarContext{
       .config = cfg,
@@ -709,19 +719,23 @@ std::unique_ptr<Flex> SettingsWindow::buildBody(float scale, const Config& cfg,
   });
 
   body->addChild(std::move(sidebar));
-  body->addChild(std::make_unique<Separator>());
+  body->addChild(ui::separator());
 
-  auto scroll = std::make_unique<ScrollView>();
-  scroll->bindState(&m_contentScrollState);
-  scroll->setFlexGrow(1.0f);
-  scroll->setScrollbarVisible(true);
-  scroll->setViewportPaddingH(0.0f);
-  scroll->setViewportPaddingV(Style::spaceSm * scale);
-  scroll->clearFill();
-  scroll->clearBorder();
-  m_contentScrollView = scroll.get();
+  auto scroll = ui::scrollView({
+      .out = &m_contentScrollView,
+      .state = &m_contentScrollState,
+      .scrollbarVisible = true,
+      .viewportPaddingH = 0.0f,
+      .viewportPaddingV = Style::spaceSm * scale,
+      .flexGrow = 1.0f,
+      .configure =
+          [](ScrollView& scrollView) {
+            scrollView.clearFill();
+            scrollView.clearBorder();
+          },
+  });
 
-  auto* content = scroll->content();
+  auto* content = m_contentScrollView->content();
   m_contentContainer = content;
   content->setDirection(FlexDirection::Vertical);
   content->setAlign(FlexAlign::Stretch);
@@ -845,13 +859,14 @@ void SettingsWindow::buildScene(std::uint32_t width, std::uint32_t height) {
   bg->setSize(w, h);
   m_panelBackground = static_cast<Box*>(m_sceneRoot->addChild(std::move(bg)));
 
-  auto main = std::make_unique<Flex>();
-  main->setDirection(FlexDirection::Vertical);
-  main->setAlign(FlexAlign::Stretch);
-  main->setJustify(FlexJustify::Start);
-  main->setGap(Style::spaceMd * scale);
-  main->setPadding(Style::spaceLg * scale);
-  main->setSize(w, h);
+  auto main = ui::column({
+      .align = FlexAlign::Stretch,
+      .justify = FlexJustify::Start,
+      .gap = Style::spaceMd * scale,
+      .padding = Style::spaceLg * scale,
+      .width = w,
+      .height = h,
+  });
 
   m_headerRow = main->addChild(centeredRow(buildHeaderRow(scale), scale));
   main->addChild(centeredRow(buildFilterRow(scale, resetPageScope, std::move(resetPagePaths)), scale));
