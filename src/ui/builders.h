@@ -9,6 +9,7 @@
 #include "ui/controls/glyph.h"
 #include "ui/controls/image.h"
 #include "ui/controls/input.h"
+#include "ui/controls/keybind_recorder.h"
 #include "ui/controls/label.h"
 #include "ui/controls/radio_button.h"
 #include "ui/controls/scroll_view.h"
@@ -352,6 +353,23 @@ namespace ui {
     std::function<void(RadioButton&)> configure = nullptr;
   };
 
+  struct KeybindRecorderProps {
+    KeybindRecorder** out = nullptr;
+    std::optional<KeyChord> chord = std::nullopt;
+    std::optional<float> scale = std::nullopt;
+    std::optional<bool> enabled = std::nullopt;
+    std::optional<std::string> unsetPlaceholder = std::nullopt;
+    std::optional<std::string> recordingPlaceholder = std::nullopt;
+    std::optional<ModifierPolicy> modifierPolicy = std::nullopt;
+    std::optional<float> width = std::nullopt;
+    std::optional<float> height = std::nullopt;
+    std::optional<float> flexGrow = std::nullopt;
+    std::optional<bool> visible = std::nullopt;
+    std::optional<bool> participatesInLayout = std::nullopt;
+    std::function<void(KeyChord)> onCommit = nullptr;
+    std::function<void(KeybindRecorder&)> configure = nullptr;
+  };
+
   [[nodiscard]] std::unique_ptr<Flex> makeFlex(FlexDirection direction, FlexProps props);
   [[nodiscard]] std::unique_ptr<Input> input(InputProps props);
   [[nodiscard]] std::unique_ptr<Button> button(ButtonProps props);
@@ -368,6 +386,7 @@ namespace ui {
   [[nodiscard]] std::unique_ptr<SearchPicker> searchPicker(SearchPickerProps props);
   [[nodiscard]] std::unique_ptr<Toggle> toggle(ToggleProps props);
   [[nodiscard]] std::unique_ptr<RadioButton> radioButton(RadioButtonProps props);
+  [[nodiscard]] std::unique_ptr<KeybindRecorder> keybindRecorder(KeybindRecorderProps props);
   [[nodiscard]] std::unique_ptr<Spacer> spacer();
 
   template <typename... Children> [[nodiscard]] std::unique_ptr<Flex> row(FlexProps props, Children&&... children) {

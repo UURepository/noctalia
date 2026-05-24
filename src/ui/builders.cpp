@@ -670,6 +670,39 @@ namespace ui {
     return control;
   }
 
+  std::unique_ptr<KeybindRecorder> keybindRecorder(KeybindRecorderProps props) {
+    auto control = std::make_unique<KeybindRecorder>();
+    if (props.scale.has_value()) {
+      control->setScale(*props.scale);
+    }
+    if (props.chord.has_value()) {
+      control->setChord(*props.chord);
+    }
+    if (props.unsetPlaceholder.has_value()) {
+      control->setUnsetPlaceholder(*props.unsetPlaceholder);
+    }
+    if (props.recordingPlaceholder.has_value()) {
+      control->setRecordingPlaceholder(*props.recordingPlaceholder);
+    }
+    if (props.modifierPolicy.has_value()) {
+      control->setModifierPolicy(*props.modifierPolicy);
+    }
+    if (props.enabled.has_value()) {
+      control->setEnabled(*props.enabled);
+    }
+    if (props.onCommit) {
+      control->setOnCommit(std::move(props.onCommit));
+    }
+    applyNodeProps(*control, props);
+    if (props.configure) {
+      props.configure(*control);
+    }
+    if (props.out != nullptr) {
+      *props.out = control.get();
+    }
+    return control;
+  }
+
   std::unique_ptr<Spacer> spacer() { return std::make_unique<Spacer>(); }
 
 } // namespace ui

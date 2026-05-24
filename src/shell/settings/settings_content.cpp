@@ -665,17 +665,20 @@ namespace settings {
                   makeLabel(i18n::tr("settings.session-actions.shortcut-label"), Style::fontSizeCaption * scale,
                             colorSpecFromRole(ColorRole::OnSurfaceVariant), FontWeight::Normal));
 
-      auto shortcutRecorder = std::make_unique<KeybindRecorder>();
-      shortcutRecorder->setScale(scale);
-      shortcutRecorder->setModifierPolicy(ModifierPolicy::Optional);
-      shortcutRecorder->setChord(row.shortcut);
-      shortcutRecorder->setUnsetPlaceholder(i18n::tr("settings.controls.keybind.unset-placeholder"));
-      shortcutRecorder->setRecordingPlaceholder(i18n::tr("settings.controls.keybind.recording-placeholder"));
-      shortcutRecorder->setOnCommit([&row, persist](KeyChord chord) {
-        row.shortcut = chord;
-        persist();
+      KeybindRecorder* shortcutRecorderPtr = nullptr;
+      auto shortcutRecorder = ui::keybindRecorder({
+          .out = &shortcutRecorderPtr,
+          .chord = row.shortcut,
+          .scale = scale,
+          .unsetPlaceholder = i18n::tr("settings.controls.keybind.unset-placeholder"),
+          .recordingPlaceholder = i18n::tr("settings.controls.keybind.recording-placeholder"),
+          .modifierPolicy = ModifierPolicy::Optional,
+          .onCommit =
+              [&row, persist](KeyChord chord) {
+                row.shortcut = chord;
+                persist();
+              },
       });
-      auto* shortcutRecorderPtr = shortcutRecorder.get();
       shortcutBlock->addChild(std::move(shortcutRecorder));
 
       if (row.shortcut.has_value()) {
@@ -1777,16 +1780,18 @@ namespace settings {
         row->setAlign(FlexAlign::Center);
         row->setGap(Style::spaceXs * scale);
 
-        auto recorder = std::make_unique<KeybindRecorder>();
-        recorder->setScale(scale);
-        recorder->setChord(keybinds.items[i]);
-        recorder->setUnsetPlaceholder(i18n::tr("settings.controls.keybind.unset-placeholder"));
-        recorder->setRecordingPlaceholder(i18n::tr("settings.controls.keybind.recording-placeholder"));
-        recorder->setOnCommit([commitItems, items = keybinds.items, i](KeyChord chord) mutable {
-          if (i < items.size()) {
-            items[i] = chord;
-            commitItems(std::move(items));
-          }
+        auto recorder = ui::keybindRecorder({
+            .chord = keybinds.items[i],
+            .scale = scale,
+            .unsetPlaceholder = i18n::tr("settings.controls.keybind.unset-placeholder"),
+            .recordingPlaceholder = i18n::tr("settings.controls.keybind.recording-placeholder"),
+            .onCommit =
+                [commitItems, items = keybinds.items, i](KeyChord chord) mutable {
+                  if (i < items.size()) {
+                    items[i] = chord;
+                    commitItems(std::move(items));
+                  }
+                },
         });
         row->addChild(std::move(recorder));
 
@@ -1818,13 +1823,15 @@ namespace settings {
         addRow->setAlign(FlexAlign::Center);
         addRow->setGap(Style::spaceXs * scale);
 
-        auto addRecorder = std::make_unique<KeybindRecorder>();
-        addRecorder->setScale(scale);
-        addRecorder->setUnsetPlaceholder(i18n::tr("settings.controls.keybind.add"));
-        addRecorder->setRecordingPlaceholder(i18n::tr("settings.controls.keybind.recording-placeholder"));
-        addRecorder->setOnCommit([commitItems, items = keybinds.items](KeyChord chord) mutable {
-          items.push_back(chord);
-          commitItems(std::move(items));
+        auto addRecorder = ui::keybindRecorder({
+            .scale = scale,
+            .unsetPlaceholder = i18n::tr("settings.controls.keybind.add"),
+            .recordingPlaceholder = i18n::tr("settings.controls.keybind.recording-placeholder"),
+            .onCommit =
+                [commitItems, items = keybinds.items](KeyChord chord) mutable {
+                  items.push_back(chord);
+                  commitItems(std::move(items));
+                },
         });
         addRow->addChild(std::move(addRecorder));
 
