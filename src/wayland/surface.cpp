@@ -456,7 +456,7 @@ void Surface::onPreferredFractionalScale(std::uint32_t numerator) {
 
   m_fractionalScaleNumerator = numerator;
   const float preferredScale = std::max(1.0f, static_cast<float>(numerator) / 120.0f);
-  kLog.info(
+  kLog.debug(
       "fractional scale preferred output={} surface={} scale={:.3f} raw={}/120 logical={}x{} buffer={}x{}",
       outputLabelForSurface(m_connection, m_surface), static_cast<const void*>(m_surface), preferredScale, numerator,
       m_width, m_height, bufferWidthFor(m_width), bufferHeightFor(m_height)
