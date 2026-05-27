@@ -54,6 +54,12 @@ namespace shell::dock {
     std::size_t instanceCount = 0;
   };
 
+  struct DockItemAction {
+    DesktopEntry entry;
+    std::string idLower;
+    std::string startupWmClassLower;
+  };
+
   struct DockItemModelDependencies {
     CompositorPlatform& platform;
     ConfigService& config;
@@ -72,7 +78,7 @@ namespace shell::dock {
     std::function<void()> pruneCachedToplevelHandles;
     std::function<desktop_entry_launch::LaunchOptions(wl_surface*)> launchOptions;
     std::function<void(DockInstance&)> toggleLauncher;
-    std::function<void(DockInstance&, DockItemView&)> openItemMenu;
+    std::function<void(DockInstance&, const DockItemAction&)> openItemMenu;
   };
 
   [[nodiscard]] bool refreshPinnedAppsIfNeeded(

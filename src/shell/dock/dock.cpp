@@ -588,7 +588,9 @@ void Dock::rebuildItems(shell::dock::DockInstance& instance) {
                 PanelManager::instance().togglePanel("launcher", PanelOpenRequest{.output = inst.output});
               },
           .openItemMenu =
-              [this](shell::dock::DockInstance& inst, shell::dock::DockItemView& item) { openItemMenu(inst, item); },
+              [this](shell::dock::DockInstance& inst, const shell::dock::DockItemAction& item) {
+                openItemMenu(inst, item);
+              },
       }
   );
 }
@@ -633,7 +635,7 @@ void Dock::closeItemMenu() {
   }
 }
 
-void Dock::openItemMenu(shell::dock::DockInstance& instance, shell::dock::DockItemView& item) {
+void Dock::openItemMenu(shell::dock::DockInstance& instance, const shell::dock::DockItemAction& item) {
   assertDockInitialized(m_platform, m_config, m_renderContext);
 
   closeItemMenu();

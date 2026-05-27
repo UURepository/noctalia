@@ -23,6 +23,7 @@
 #include <cmath>
 #include <linux/input-event-codes.h>
 #include <memory>
+#include <utility>
 
 namespace {
 
@@ -219,7 +220,7 @@ namespace shell::dock {
     );
   }
 
-  void handleItemClick(DockInstance& instance, DockItemView& item, DockItemClickContext& context);
+  void handleItemClick(DockInstance& instance, const DockItemAction& item, DockItemClickContext& context);
 
   std::unique_ptr<InputArea> createLauncherButton(
       DockInstance& instance, const DockConfig& cfg, const std::shared_ptr<DockItemClickContext>& clickContext
@@ -379,6 +380,11 @@ namespace shell::dock {
       item.entry = entry;
       item.idLower = StringUtils::toLower(entry.id);
       item.startupWmClassLower = StringUtils::toLower(entry.startupWmClass);
+      DockItemAction action{
+          .entry = item.entry,
+          .idLower = item.idLower,
+          .startupWmClassLower = item.startupWmClassLower,
+      };
       item.active = matchesActiveApp(item, activeIdLower);
       item.running = matchesRunningApp(item, runningLower);
 
@@ -517,11 +523,11 @@ namespace shell::dock {
         }
       });
       areaNode->setAcceptedButtons(InputArea::buttonMask({BTN_LEFT, BTN_RIGHT}));
-      areaNode->setOnClick([itemPtr, instPtr, clickContext](const InputArea::PointerData& d) {
+      areaNode->setOnClick([action = std::move(action), instPtr, clickContext](const InputArea::PointerData& d) {
         if (d.button == BTN_LEFT) {
-          handleItemClick(*instPtr, *itemPtr, *clickContext);
+          handleItemClick(*instPtr, action, *clickContext);
         } else if (d.button == BTN_RIGHT && clickContext->callbacks.openItemMenu) {
-          clickContext->callbacks.openItemMenu(*instPtr, *itemPtr);
+          clickContext->callbacks.openItemMenu(*instPtr, action);
         }
       });
 
@@ -643,7 +649,7 @@ namespace shell::dock {
     }
   }
 
-  void handleItemClick(DockInstance& instance, DockItemView& item, DockItemClickContext& context) {
+  void handleItemClick(DockInstance& instance, const DockItemAction& item, DockItemClickContext& context) {
     if (context.callbacks.pruneCachedToplevelHandles) {
       context.callbacks.pruneCachedToplevelHandles();
     }
