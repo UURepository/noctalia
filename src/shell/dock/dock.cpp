@@ -540,13 +540,16 @@ void Dock::rebuildItems(shell::dock::DockInstance& instance) {
   shell::dock::rebuildItems(
       instance,
       {
-          .platform = *m_platform,
-          .config = *m_config,
+          .model =
+              {
+                  .platform = *m_platform,
+                  .config = *m_config,
+                  .lastActiveHandleByAppIdLower = m_lastActiveHandleByAppIdLower,
+                  .pinnedEntries = m_pinnedEntries,
+                  .modelSerial = m_modelSerial,
+              },
           .renderContext = *m_renderContext,
           .iconResolver = m_iconResolver,
-          .lastActiveHandleByAppIdLower = m_lastActiveHandleByAppIdLower,
-          .pinnedEntries = m_pinnedEntries,
-          .modelSerial = m_modelSerial,
       },
       {
           .pruneCachedToplevelHandles = [this]() { pruneCachedToplevelHandles(); },
@@ -571,13 +574,16 @@ void Dock::updateVisuals(shell::dock::DockInstance& instance) {
   shell::dock::updateVisuals(
       instance,
       {
-          .platform = *m_platform,
-          .config = *m_config,
+          .model =
+              {
+                  .platform = *m_platform,
+                  .config = *m_config,
+                  .lastActiveHandleByAppIdLower = m_lastActiveHandleByAppIdLower,
+                  .pinnedEntries = m_pinnedEntries,
+                  .modelSerial = m_modelSerial,
+              },
           .renderContext = *m_renderContext,
           .iconResolver = m_iconResolver,
-          .lastActiveHandleByAppIdLower = m_lastActiveHandleByAppIdLower,
-          .pinnedEntries = m_pinnedEntries,
-          .modelSerial = m_modelSerial,
       }
   );
 }

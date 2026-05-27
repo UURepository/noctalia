@@ -62,13 +62,9 @@ namespace shell::dock {
   };
 
   struct DockItemSceneDependencies {
-    CompositorPlatform& platform;
-    ConfigService& config;
+    DockItemModelDependencies model;
     RenderContext& renderContext;
     IconResolver& iconResolver;
-    std::unordered_map<std::string, zwlr_foreign_toplevel_handle_v1*>& lastActiveHandleByAppIdLower;
-    const std::vector<DesktopEntry>& pinnedEntries;
-    std::uint64_t modelSerial = 0;
   };
 
   struct DockItemCallbacks {

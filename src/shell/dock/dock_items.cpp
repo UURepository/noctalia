@@ -307,13 +307,13 @@ namespace shell::dock {
       return;
     }
 
-    const auto& cfg = deps.config.config().dock;
+    const auto& cfg = deps.model.config.config().dock;
     const bool vert = shell::dock::isVerticalPosition(cfg.position);
     const float iSize = static_cast<float>(cfg.iconSize);
     auto clickContext = std::make_shared<DockItemClickContext>(DockItemClickContext{
-        .platform = deps.platform,
-        .config = deps.config,
-        .lastActiveHandleByAppIdLower = deps.lastActiveHandleByAppIdLower,
+        .platform = deps.model.platform,
+        .config = deps.model.config,
+        .lastActiveHandleByAppIdLower = deps.model.lastActiveHandleByAppIdLower,
         .callbacks = callbacks,
     });
 
@@ -342,12 +342,12 @@ namespace shell::dock {
     );
 
     // Determine items: pinned + (optionally) running-only apps not in pinned.
-    std::vector<DesktopEntry> itemEntries = deps.pinnedEntries;
+    std::vector<DesktopEntry> itemEntries = deps.model.pinnedEntries;
     wl_output* filterOutput = dockFilterOutput(cfg, instance.output);
     instance.lastFilterOutput = filterOutput;
 
     if (cfg.showRunning) {
-      const auto runningIds = deps.platform.runningAppIds(filterOutput);
+      const auto runningIds = deps.model.platform.runningAppIds(filterOutput);
       const auto& allEntries = desktopEntries();
       const auto resolvedRunning = app_identity::resolveRunningApps(runningIds, allEntries);
 
@@ -368,7 +368,7 @@ namespace shell::dock {
     }
 
     const auto activeIdLower = instance.activeAppIdLower;
-    const auto runningIds = deps.platform.runningAppIds(filterOutput);
+    const auto runningIds = deps.model.platform.runningAppIds(filterOutput);
     const auto resolvedRunning = app_identity::resolveRunningApps(runningIds, desktopEntries());
     std::vector<std::string> runningLower;
     runningLower.reserve(resolvedRunning.size());
@@ -541,13 +541,13 @@ namespace shell::dock {
       instance.row->addChild(createLauncherButton(instance, cfg, clickContext));
     }
 
-    instance.modelSerial = deps.modelSerial;
+    instance.modelSerial = deps.model.modelSerial;
 
-    shell::dock::resizeSurface(instance, cfg, deps.config.config().shell.shadow);
+    shell::dock::resizeSurface(instance, cfg, deps.model.config.config().shell.shadow);
   }
 
   void updateVisuals(DockInstance& instance, DockItemSceneDependencies deps) {
-    const auto& cfg = deps.config.config().dock;
+    const auto& cfg = deps.model.config.config().dock;
 
     for (auto& item : instance.items) {
       const float iconScale = item.active ? cfg.activeScale : cfg.inactiveScale;
@@ -594,8 +594,9 @@ namespace shell::dock {
       const bool needsWindowCount = cfg.showDots || item.badge != nullptr;
       std::size_t count = 0;
       if (needsWindowCount) {
-        const auto windows =
-            deps.platform.windowsForApp(item.idLower, item.startupWmClassLower, dockFilterOutput(cfg, instance.output));
+        const auto windows = deps.model.platform.windowsForApp(
+            item.idLower, item.startupWmClassLower, dockFilterOutput(cfg, instance.output)
+        );
         count = windows.size();
         item.instanceCount = count;
       }
