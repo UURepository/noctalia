@@ -8,6 +8,7 @@
 #include "config/config_service.h"
 #include "config/config_types.h"
 #include "core/deferred_call.h"
+#include "core/keybind_matcher.h"
 #include "core/log.h"
 #include "ipc/ipc_service.h"
 #include "notification/notification.h"
@@ -346,10 +347,21 @@ bool ScreenshotService::onPointerEvent(const PointerEvent& event) {
 }
 
 bool ScreenshotService::onKeyboardEvent(const KeyboardEvent& event) {
-  if (m_regionOverlay == nullptr || !m_regionOverlay->isActive()) {
+  if (!event.pressed) {
     return false;
   }
-  return m_regionOverlay->onKeyboardEvent(event);
+  const bool regionActive = m_regionOverlay != nullptr && m_regionOverlay->isActive();
+  if (!m_freezeCaptureActive && !regionActive) {
+    return false;
+  }
+  if (regionActive && m_regionOverlay->onKeyboardEvent(event)) {
+    return true;
+  }
+  if (!KeybindMatcher::matches(KeybindAction::Cancel, event.sym, event.modifiers)) {
+    return false;
+  }
+  cancelRegionCapture();
+  return true;
 }
 
 ScreenshotService::OutputOptions ScreenshotService::outputOptionsFromWidget(const WidgetConfig& widget) {
@@ -532,6 +544,11 @@ void ScreenshotService::beginFreezeCapture() {
   m_freezeCaptureActive = true;
 
   while (!m_pendingFreezeOutputs.empty()) {
+    if (!m_freezeCaptureActive) {
+      m_frozenScreenshots.clear();
+      return;
+    }
+
     wl_output* output = m_pendingFreezeOutputs.front();
     m_pendingFreezeOutputs.erase(m_pendingFreezeOutputs.begin());
 
@@ -542,7 +559,15 @@ void ScreenshotService::beginFreezeCapture() {
     ScreencopyImage image;
     std::string error;
     if (!captureOutputBlocking(m_capture, m_wayland, output, image, error)) {
+      if (!m_freezeCaptureActive) {
+        m_frozenScreenshots.clear();
+        return;
+      }
       abortFreezeCapture(error.empty() ? "Failed to freeze screen" : error);
+      return;
+    }
+    if (!m_freezeCaptureActive) {
+      m_frozenScreenshots.clear();
       return;
     }
     m_frozenScreenshots.push_back(capture::FrozenScreenshot{.output = output, .image = std::move(image)});
@@ -575,6 +600,16 @@ void ScreenshotService::abortFreezeCapture(const std::string& message) {
   m_capture.cancelInFlight();
   if (!message.empty()) {
     notifyError(message);
+  }
+}
+
+void ScreenshotService::cancelRegionCapture() {
+  if (m_freezeCaptureActive) {
+    abortFreezeCapture({});
+    return;
+  }
+  if (m_regionOverlay != nullptr && m_regionOverlay->isActive()) {
+    m_regionOverlay->cancelSelection();
   }
 }
 

@@ -84,6 +84,7 @@ private:
   void beginFreezeCapture();
   void finishFreezeCapture();
   void abortFreezeCapture(const std::string& message);
+  void cancelRegionCapture();
   void deliverFrozenRegion(LogicalRect region, wl_output* output, const OutputOptions& options);
   void startNextQueuedCapture();
   void captureAllOutputs(const OutputOptions& options);

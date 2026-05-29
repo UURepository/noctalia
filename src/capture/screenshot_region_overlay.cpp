@@ -1,9 +1,9 @@
 #include "capture/screenshot_region_overlay.h"
 
-#include "compositors/compositor_detect.h"
+#include "config/config_types.h"
 #include "core/deferred_call.h"
 #include "core/key_modifiers.h"
-#include "core/key_symbols.h"
+#include "core/keybind_matcher.h"
 #include "core/log.h"
 #include "core/ui_phase.h"
 #include "render/animation/animation_manager.h"
@@ -47,9 +47,7 @@ namespace capture {
       return nullptr;
     }
 
-    [[nodiscard]] LayerShellKeyboard overlayKeyboardMode() {
-      return compositors::isHyprland() ? LayerShellKeyboard::Exclusive : LayerShellKeyboard::None;
-    }
+    [[nodiscard]] LayerShellKeyboard overlayKeyboardMode() { return LayerShellKeyboard::Exclusive; }
 
     [[nodiscard]] const ScreencopyImage*
     frozenImageForOutput(const std::vector<FrozenScreenshot>& screenshots, wl_output* output) {
@@ -116,6 +114,21 @@ namespace capture {
     m_freezeScreen = false;
     m_frozenScreenshots.clear();
     destroySurfaces();
+  }
+
+  void ScreenshotRegionOverlay::cancelSelection() {
+    if (!m_active) {
+      return;
+    }
+    DeferredCall::callLater([this]() {
+      if (!m_active) {
+        return;
+      }
+      cancel();
+      if (m_onComplete) {
+        m_onComplete(std::nullopt, nullptr);
+      }
+    });
   }
 
   void ScreenshotRegionOverlay::onOutputChange() {
@@ -295,13 +308,8 @@ namespace capture {
       if (!key.pressed) {
         return;
       }
-      if (KeySymbol::isEscape(key.sym)) {
-        DeferredCall::callLater([this]() {
-          cancel();
-          if (m_onComplete) {
-            m_onComplete(std::nullopt, nullptr);
-          }
-        });
+      if (KeybindMatcher::matches(KeybindAction::Cancel, key.sym, key.modifiers)) {
+        cancelSelection();
       }
     });
     input->setFocusable(true);
@@ -362,6 +370,9 @@ namespace capture {
         m_wayland->setCursorShape(serial, shape);
       }
     });
+    if (inst.input != nullptr) {
+      inst.inputDispatcher.setFocus(inst.input);
+    }
 
     updateSelectionVisuals();
   }
@@ -445,18 +456,26 @@ namespace capture {
   }
 
   bool ScreenshotRegionOverlay::onKeyboardEvent(const KeyboardEvent& event) {
-    if (!m_active || !event.pressed) {
+    if (!m_active || !event.pressed || m_wayland == nullptr) {
       return false;
     }
-    if (!KeySymbol::isEscape(event.sym)) {
-      return false;
-    }
-    DeferredCall::callLater([this]() {
-      cancel();
-      if (m_onComplete) {
-        m_onComplete(std::nullopt, nullptr);
+
+    wl_surface* const kbSurface = m_wayland->lastKeyboardSurface();
+    bool onOverlay = false;
+    for (const auto& inst : m_instances) {
+      if (inst != nullptr && inst->surface != nullptr && inst->surface->wlSurface() == kbSurface) {
+        onOverlay = true;
+        break;
       }
-    });
+    }
+    if (!onOverlay) {
+      return false;
+    }
+
+    if (!KeybindMatcher::matches(KeybindAction::Cancel, event.sym, event.modifiers)) {
+      return false;
+    }
+    cancelSelection();
     return true;
   }
 

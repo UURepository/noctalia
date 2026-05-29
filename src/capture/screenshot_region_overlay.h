@@ -30,6 +30,7 @@ namespace capture {
     void setFrozenScreenshots(std::vector<FrozenScreenshot> screenshots);
     void begin(bool freezeScreen);
     void cancel();
+    void cancelSelection();
     void onOutputChange();
 
     [[nodiscard]] bool isActive() const noexcept { return m_active; }

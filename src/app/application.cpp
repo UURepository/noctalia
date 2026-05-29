@@ -1078,10 +1078,10 @@ void Application::initUi() {
       m_settingsWindow.onKeyboardEvent(event);
       return;
     }
-    if (m_overviewLauncherCapture.handleKeyboardEvent(event)) {
+    if (m_screenshotService.onKeyboardEvent(event)) {
       return;
     }
-    if (m_screenshotService.onKeyboardEvent(event)) {
+    if (m_overviewLauncherCapture.handleKeyboardEvent(event)) {
       return;
     }
     if (m_notificationToast.onKeyboardEvent(event)) {
