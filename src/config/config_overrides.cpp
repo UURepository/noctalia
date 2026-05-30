@@ -1257,6 +1257,7 @@ void ConfigService::extractWallpaperFromTable(const toml::table& table) {
   m_defaultWallpaperPath.clear();
   m_lastWallpaperPath.clear();
   m_monitorWallpaperPaths.clear();
+  m_wallpaperFavorites.clear();
 
   if (auto* wpDefault = table["wallpaper"]["default"].as_table()) {
     if (auto v = (*wpDefault)["path"].value<std::string>()) {
@@ -1276,6 +1277,399 @@ void ConfigService::extractWallpaperFromTable(const toml::table& table) {
         }
       }
     }
+  }
+  if (auto* favorites = table["wallpaper"]["favorite"].as_array()) {
+    for (const auto& node : *favorites) {
+      const auto* favTbl = node.as_table();
+      if (favTbl == nullptr) {
+        continue;
+      }
+      WallpaperFavorite favorite;
+      if (auto path = (*favTbl)["path"].value<std::string>()) {
+        favorite.path = FileUtils::normalizeWallpaperPath(*path);
+      }
+      if (favorite.path.empty()) {
+        continue;
+      }
+      if (auto modeKey = (*favTbl)["theme_mode"].value<std::string>()) {
+        if (auto parsed = enumFromKey(kThemeModes, *modeKey)) {
+          favorite.themeMode = *parsed;
+        }
+      }
+      if (auto sourceKey = (*favTbl)["palette_source"].value<std::string>()) {
+        if (auto parsed = enumFromKey(kPaletteSources, *sourceKey)) {
+          favorite.paletteSource = *parsed;
+        }
+      }
+      if (auto v = (*favTbl)["builtin_palette"].value<std::string>()) {
+        favorite.builtinPalette = *v;
+      }
+      if (auto v = (*favTbl)["community_palette"].value<std::string>()) {
+        favorite.communityPalette = *v;
+      }
+      if (auto v = (*favTbl)["custom_palette"].value<std::string>()) {
+        favorite.customPalette = *v;
+      }
+      if (auto v = (*favTbl)["wallpaper_scheme"].value<std::string>()) {
+        favorite.wallpaperScheme = *v;
+      }
+      m_wallpaperFavorites.push_back(std::move(favorite));
+    }
+  }
+}
+
+void ConfigService::syncWallpaperFavoritesToOverridesTable() {
+  auto* wallpaperTbl = ensureTable(m_overridesTable, "wallpaper");
+  if (m_wallpaperFavorites.empty()) {
+    wallpaperTbl->erase("favorite");
+    return;
+  }
+
+  toml::array favoritesArray;
+  favoritesArray.reserve(m_wallpaperFavorites.size());
+  for (const auto& favorite : m_wallpaperFavorites) {
+    toml::table entry;
+    entry.insert("path", favorite.path);
+    entry.insert("theme_mode", std::string(enumToKey(kThemeModes, favorite.themeMode)));
+    if (favorite.paletteSource.has_value()) {
+      entry.insert("palette_source", std::string(enumToKey(kPaletteSources, *favorite.paletteSource)));
+      switch (*favorite.paletteSource) {
+      case PaletteSource::Builtin:
+        if (!favorite.builtinPalette.empty()) {
+          entry.insert("builtin_palette", favorite.builtinPalette);
+        }
+        break;
+      case PaletteSource::Wallpaper:
+        if (!favorite.wallpaperScheme.empty()) {
+          entry.insert("wallpaper_scheme", favorite.wallpaperScheme);
+        }
+        break;
+      case PaletteSource::Community:
+        if (!favorite.communityPalette.empty()) {
+          entry.insert("community_palette", favorite.communityPalette);
+        }
+        break;
+      case PaletteSource::Custom:
+        if (!favorite.customPalette.empty()) {
+          entry.insert("custom_palette", favorite.customPalette);
+        }
+        break;
+      }
+    }
+    favoritesArray.push_back(std::move(entry));
+  }
+  wallpaperTbl->insert_or_assign("favorite", std::move(favoritesArray));
+}
+
+const std::vector<WallpaperFavorite>& ConfigService::wallpaperFavorites() const noexcept {
+  return m_wallpaperFavorites;
+}
+
+bool ConfigService::isWallpaperFavorite(std::string_view path) const {
+  const std::string normalized = FileUtils::normalizeWallpaperPath(path);
+  for (const auto& favorite : m_wallpaperFavorites) {
+    if (favorite.path == normalized) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const WallpaperFavorite* ConfigService::wallpaperFavorite(std::string_view path) const {
+  const std::string normalized = FileUtils::normalizeWallpaperPath(path);
+  for (const auto& favorite : m_wallpaperFavorites) {
+    if (favorite.path == normalized) {
+      return &favorite;
+    }
+  }
+  return nullptr;
+}
+
+void ConfigService::addWallpaperFavorite(std::string path) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  path = FileUtils::normalizeWallpaperPath(path);
+  if (path.empty()) {
+    return;
+  }
+
+  std::erase_if(m_wallpaperFavorites, [&](const WallpaperFavorite& favorite) { return favorite.path == path; });
+  m_wallpaperFavorites.push_back(WallpaperFavorite{.path = std::move(path), .themeMode = ThemeMode::Auto});
+
+  syncWallpaperFavoritesToOverridesTable();
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+  m_ownOverridesWritePending = true;
+}
+
+void ConfigService::removeWallpaperFavorite(std::string_view path) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  const std::string normalized = FileUtils::normalizeWallpaperPath(path);
+  const auto before = m_wallpaperFavorites.size();
+  std::erase_if(m_wallpaperFavorites, [&](const WallpaperFavorite& favorite) { return favorite.path == normalized; });
+  if (m_wallpaperFavorites.size() == before) {
+    return;
+  }
+
+  syncWallpaperFavoritesToOverridesTable();
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+  m_ownOverridesWritePending = true;
+}
+
+void ConfigService::setWallpaperFavoriteThemeMode(std::string_view path, ThemeMode themeMode) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  const std::string normalized = FileUtils::normalizeWallpaperPath(path);
+  bool changed = false;
+  for (auto& favorite : m_wallpaperFavorites) {
+    if (favorite.path != normalized) {
+      continue;
+    }
+    if (favorite.themeMode != themeMode) {
+      favorite.themeMode = themeMode;
+      changed = true;
+    }
+    break;
+  }
+  if (!changed) {
+    return;
+  }
+
+  syncWallpaperFavoritesToOverridesTable();
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+  m_ownOverridesWritePending = true;
+}
+
+void ConfigService::setWallpaperFavoritePaletteSource(std::string_view path, std::optional<PaletteSource> source) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  const std::string normalized = FileUtils::normalizeWallpaperPath(path);
+  bool changed = false;
+  for (auto& favorite : m_wallpaperFavorites) {
+    if (favorite.path != normalized) {
+      continue;
+    }
+    if (favorite.paletteSource != source) {
+      favorite.paletteSource = source;
+      changed = true;
+    }
+    if (source.has_value()) {
+      switch (*source) {
+      case PaletteSource::Builtin:
+        if (favorite.builtinPalette.empty()) {
+          favorite.builtinPalette = m_config.theme.builtinPalette;
+          changed = true;
+        }
+        break;
+      case PaletteSource::Wallpaper:
+        if (favorite.wallpaperScheme.empty()) {
+          favorite.wallpaperScheme = m_config.theme.wallpaperScheme;
+          changed = true;
+        }
+        break;
+      case PaletteSource::Community:
+        if (favorite.communityPalette.empty()) {
+          favorite.communityPalette = m_config.theme.communityPalette;
+          changed = true;
+        }
+        break;
+      case PaletteSource::Custom:
+        if (favorite.customPalette.empty()) {
+          favorite.customPalette = m_config.theme.customPalette;
+          changed = true;
+        }
+        break;
+      }
+    }
+    break;
+  }
+  if (!changed) {
+    return;
+  }
+
+  syncWallpaperFavoritesToOverridesTable();
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+  m_ownOverridesWritePending = true;
+}
+
+void ConfigService::setWallpaperFavoritePaletteSelection(std::string_view path, std::string_view value) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  const std::string normalized = FileUtils::normalizeWallpaperPath(path);
+  const std::string selection(value);
+  bool changed = false;
+  for (auto& favorite : m_wallpaperFavorites) {
+    if (favorite.path != normalized || !favorite.paletteSource.has_value()) {
+      continue;
+    }
+    switch (*favorite.paletteSource) {
+    case PaletteSource::Builtin:
+      if (favorite.builtinPalette != selection) {
+        favorite.builtinPalette = selection;
+        changed = true;
+      }
+      break;
+    case PaletteSource::Wallpaper:
+      if (favorite.wallpaperScheme != selection) {
+        favorite.wallpaperScheme = selection;
+        changed = true;
+      }
+      break;
+    case PaletteSource::Community:
+      if (favorite.communityPalette != selection) {
+        favorite.communityPalette = selection;
+        changed = true;
+      }
+      break;
+    case PaletteSource::Custom:
+      if (favorite.customPalette != selection) {
+        favorite.customPalette = selection;
+        changed = true;
+      }
+      break;
+    }
+    break;
+  }
+  if (!changed) {
+    return;
+  }
+
+  syncWallpaperFavoritesToOverridesTable();
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+  m_ownOverridesWritePending = true;
+}
+
+void ConfigService::applyWallpaperSelection(
+    const std::optional<std::string>& connectorName, const std::string& path, const WallpaperFavorite* applyTheme,
+    const std::vector<std::string>& allConnectors
+) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  bool changed = false;
+
+  if (applyTheme != nullptr) {
+    auto* themeTbl = ensureTable(m_overridesTable, "theme");
+    if (m_config.theme.mode != applyTheme->themeMode) {
+      themeTbl->insert_or_assign("mode", std::string(enumToKey(kThemeModes, applyTheme->themeMode)));
+      changed = true;
+    }
+
+    if (applyTheme->paletteSource.has_value()) {
+      const PaletteSource source = *applyTheme->paletteSource;
+      if (m_config.theme.source != source) {
+        themeTbl->insert_or_assign("source", std::string(enumToKey(kPaletteSources, source)));
+        changed = true;
+      }
+      switch (source) {
+      case PaletteSource::Builtin:
+        if (!applyTheme->builtinPalette.empty() && m_config.theme.builtinPalette != applyTheme->builtinPalette) {
+          themeTbl->insert_or_assign("builtin", applyTheme->builtinPalette);
+          changed = true;
+        }
+        break;
+      case PaletteSource::Wallpaper:
+        if (!applyTheme->wallpaperScheme.empty() && m_config.theme.wallpaperScheme != applyTheme->wallpaperScheme) {
+          themeTbl->insert_or_assign("wallpaper_scheme", applyTheme->wallpaperScheme);
+          changed = true;
+        }
+        break;
+      case PaletteSource::Community:
+        if (!applyTheme->communityPalette.empty() && m_config.theme.communityPalette != applyTheme->communityPalette) {
+          themeTbl->insert_or_assign("community_palette", applyTheme->communityPalette);
+          changed = true;
+        }
+        break;
+      case PaletteSource::Custom:
+        if (!applyTheme->customPalette.empty() && m_config.theme.customPalette != applyTheme->customPalette) {
+          themeTbl->insert_or_assign("custom_palette", applyTheme->customPalette);
+          changed = true;
+        }
+        break;
+      }
+    }
+  }
+
+  auto* wallpaperTbl = ensureTable(m_overridesTable, "wallpaper");
+
+  if (connectorName.has_value() && !connectorName->empty()) {
+    auto it = m_monitorWallpaperPaths.find(*connectorName);
+    if (it == m_monitorWallpaperPaths.end() || it->second != path) {
+      m_monitorWallpaperPaths[*connectorName] = path;
+      changed = true;
+    }
+    auto* monitorsTbl = ensureTable(*wallpaperTbl, "monitors");
+    auto* monTbl = ensureTable(*monitorsTbl, *connectorName);
+    monTbl->insert_or_assign("path", path);
+  } else {
+    for (const auto& connector : allConnectors) {
+      if (connector.empty()) {
+        continue;
+      }
+      auto it = m_monitorWallpaperPaths.find(connector);
+      if (it == m_monitorWallpaperPaths.end() || it->second != path) {
+        m_monitorWallpaperPaths[connector] = path;
+        changed = true;
+      }
+      auto* monitorsTbl = ensureTable(*wallpaperTbl, "monitors");
+      auto* monTbl = ensureTable(*monitorsTbl, connector);
+      monTbl->insert_or_assign("path", path);
+    }
+    if (m_defaultWallpaperPath != path) {
+      m_defaultWallpaperPath = path;
+      changed = true;
+    }
+    auto* defaultTbl = ensureTable(*wallpaperTbl, "default");
+    defaultTbl->insert_or_assign("path", path);
+  }
+
+  if (m_lastWallpaperPath != path) {
+    m_lastWallpaperPath = path;
+    changed = true;
+    auto* lastTbl = ensureTable(*wallpaperTbl, "last");
+    lastTbl->insert_or_assign("path", path);
+  }
+
+  if (!changed) {
+    return;
+  }
+
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+
+  m_ownOverridesWritePending = true;
+  loadAll();
+  fireReloadCallbacks();
+  if (m_wallpaperChangeCallback) {
+    m_wallpaperChangeCallback();
   }
 }
 

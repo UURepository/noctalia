@@ -30,6 +30,10 @@ public:
   void setCompact(bool compact);
   void clearOptions();
 
+  void setPadding(float padding);
+  void setPadding(float vertical, float horizontal);
+  void setPadding(float top, float right, float bottom, float left);
+
   void setEnabled(bool enabled);
   void setSurfaceOpacity(float opacity);
   [[nodiscard]] bool enabled() const noexcept { return m_enabled; }
@@ -54,6 +58,7 @@ private:
   float m_scale = 1.0f;
   bool m_equalSegmentWidths = false;
   bool m_compact = false;
+  float m_outerPadding = 0.0f;
   float m_surfaceOpacity = 1.0f;
   bool m_enabled = true;
 };

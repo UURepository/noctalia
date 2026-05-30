@@ -22,7 +22,7 @@ std::size_t Segmented::addOption(std::string_view label) { return addOption(labe
 
 std::size_t Segmented::addOption(std::string_view label, std::string_view glyph) {
   const std::size_t index = m_buttons.size();
-  if (index > 0) {
+  if (index > 0 && !m_compact) {
     auto sep = makeSegmentSeparator();
     m_separators.push_back(sep.get());
     addChild(std::move(sep));
@@ -89,6 +89,21 @@ void Segmented::setCompact(bool compact) {
     }
   }
   markLayoutDirty();
+}
+
+void Segmented::setPadding(float padding) {
+  m_outerPadding = padding;
+  Flex::setPadding(padding);
+}
+
+void Segmented::setPadding(float vertical, float horizontal) {
+  m_outerPadding = vertical;
+  Flex::setPadding(vertical, horizontal);
+}
+
+void Segmented::setPadding(float top, float right, float bottom, float left) {
+  m_outerPadding = top;
+  Flex::setPadding(top, right, bottom, left);
 }
 
 void Segmented::setOptionTooltip(std::size_t index, std::string_view text) {
@@ -168,8 +183,8 @@ Segmented::makeSegmentButton(std::string_view label, std::string_view glyph, std
 
 void Segmented::applyButtonMetrics(Button& button) const {
   if (m_compact) {
-    button.setMinHeight((Style::fontSizeBody + Style::spaceXs * 2.0f) * m_scale);
-    button.setPadding(Style::spaceXs * m_scale, Style::spaceXs * m_scale);
+    button.setMinHeight(Style::controlHeightSm * m_scale);
+    button.setPadding(Style::spaceXs * m_scale, Style::spaceSm * m_scale);
     return;
   }
 
@@ -213,7 +228,7 @@ void Segmented::refreshVariants() {
 }
 
 void Segmented::applyOuterStyle() {
-  setPadding(0.0f);
+  Flex::setPadding(m_outerPadding);
   setFill(colorSpecFromRole(ColorRole::SurfaceVariant, m_surfaceOpacity));
   clearBorder();
   setRadius(Style::scaledRadiusMd(m_scale));

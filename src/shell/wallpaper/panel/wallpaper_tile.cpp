@@ -4,12 +4,50 @@
 #include "render/core/renderer.h"
 #include "render/core/thumbnail_service.h"
 #include "ui/builders.h"
+#include "ui/controls/box.h"
 #include "ui/palette.h"
 #include "ui/style.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <utility>
+
+namespace {
+
+  bool parseColorWallpaperPath(std::string_view path, Color& out) {
+    constexpr std::string_view kPrefix = "color:";
+    if (!path.starts_with(kPrefix)) {
+      return false;
+    }
+    return tryParseHexColor(path.substr(kPrefix.size()), out);
+  }
+
+  [[nodiscard]] float overlayControlSize(float contentScale) { return Style::controlHeightSm * contentScale; }
+
+  [[nodiscard]] float starButtonSize(float contentScale) {
+    const float starPadding = Style::spaceXs * contentScale;
+    return overlayControlSize(contentScale) + starPadding * 2.0f;
+  }
+
+  [[nodiscard]] bool
+  starRegionContains(float cellWidth, float /*cellHeight*/, float contentScale, float localX, float localY) {
+    const float padding = Style::spaceXs * contentScale;
+    const float frameWidth = std::max(0.0f, cellWidth - padding * 2.0f);
+    const float inset = Style::spaceXs * contentScale;
+    const float btnSize = starButtonSize(contentScale);
+    const float starX = padding + frameWidth - btnSize - inset;
+    const float starY = padding + inset;
+    return localX >= starX && localX < starX + btnSize && localY >= starY && localY < starY + btnSize;
+  }
+
+} // namespace
+
+bool WallpaperTile::hitTestStarRegion(
+    float cellWidth, float cellHeight, float contentScale, float localX, float localY
+) noexcept {
+  return starRegionContains(cellWidth, cellHeight, contentScale, localX, localY);
+}
 
 WallpaperTile::WallpaperTile(float cellWidth, float cellHeight, float contentScale)
     : m_cellWidth(cellWidth), m_cellHeight(cellHeight), m_contentScale(contentScale) {
@@ -37,7 +75,7 @@ WallpaperTile::WallpaperTile(float cellWidth, float cellHeight, float contentSca
   });
 
   const float frameRadius = Style::scaledRadiusLg(m_contentScale);
-  const float outlineWidth = Style::borderWidth * 2.0f;
+  const float overlaySize = overlayControlSize(m_contentScale);
 
   auto layout = ui::column({
       .out = &m_layout,
@@ -46,40 +84,69 @@ WallpaperTile::WallpaperTile(float cellWidth, float cellHeight, float contentSca
   addChild(std::move(layout));
 
   m_layout->addChild(
-      ui::column({
-          .out = &m_thumbBox,
-          .align = FlexAlign::Center,
-          .justify = FlexJustify::Center,
-          .configure = [frameRadius](Flex& flex) { flex.setRadius(frameRadius); },
-      })
-  );
-
-  m_thumbBox->addChild(
-      ui::image({
-          .out = &m_thumb,
-          .fit = ImageFit::Cover,
+      ui::box({
+          .out = &m_thumbHost,
           .radius = frameRadius,
-          .configure = [outlineWidth](Image& image) {
-            image.setBorder(colorSpecFromRole(ColorRole::Outline), outlineWidth);
+          .configure = [frameRadius](Box& box) {
+            box.setRadius(frameRadius);
+            box.setClipChildren(true);
           },
       })
   );
 
-  m_thumbBox->addChild(
+  m_thumbHost->addChild(
+      ui::image({
+          .out = &m_thumb,
+          .fit = ImageFit::Cover,
+          .radius = frameRadius,
+          .participatesInLayout = false,
+      })
+  );
+
+  m_thumbHost->addChild(
       ui::glyph({
           .out = &m_folderGlyph,
           .glyph = "folder",
           .color = colorSpecFromRole(ColorRole::Primary),
           .visible = false,
+          .participatesInLayout = false,
       })
   );
 
-  m_thumbBox->addChild(
+  m_thumbHost->addChild(
       ui::glyph({
           .out = &m_loadingGlyph,
           .glyph = "hourglass-empty",
           .color = colorSpecFromRole(ColorRole::OnSurface, 0.5f),
           .visible = false,
+          .participatesInLayout = false,
+      })
+  );
+
+  m_thumbHost->addChild(
+      ui::glyph({
+          .out = &m_starGlyph,
+          .glyph = "star",
+          .glyphSize = Style::fontSizeBody * m_contentScale,
+          .color = colorSpecFromRole(ColorRole::OnSurface),
+          .participatesInLayout = false,
+      })
+  );
+
+  applyStarVisualState();
+
+  m_thumbHost->addChild(
+      ui::button({
+          .out = &m_modeBadge,
+          .glyph = "sun",
+          .glyphSize = Style::fontSizeCaption * m_contentScale,
+          .variant = ButtonVariant::Primary,
+          .minWidth = overlaySize,
+          .minHeight = overlaySize,
+          .padding = Style::spaceXs * m_contentScale * 0.5f,
+          .radius = Style::scaledRadiusMd(m_contentScale),
+          .visible = false,
+          .participatesInLayout = false,
       })
   );
 
@@ -111,6 +178,47 @@ void WallpaperTile::setThumbnailService(ThumbnailService* service) {
   }
 }
 
+void WallpaperTile::layoutThumbOverlays() {
+  if (m_thumbHost == nullptr || m_thumbFrameWidth <= 0.0f || m_thumbFrameHeight <= 0.0f) {
+    return;
+  }
+
+  const float inset = Style::spaceXs * m_contentScale;
+  const float w = m_thumbFrameWidth;
+  const float h = m_thumbFrameHeight;
+
+  if (m_thumb != nullptr) {
+    m_thumb->setPosition(0.0f, 0.0f);
+    m_thumb->setFrameSize(w, h);
+  }
+
+  if (m_starGlyph != nullptr) {
+    const float hitSize = starButtonSize(m_contentScale);
+    const float glyphW = m_starGlyph->width() > 0.0f ? m_starGlyph->width() : hitSize;
+    const float glyphH = m_starGlyph->height() > 0.0f ? m_starGlyph->height() : hitSize;
+    m_starGlyph->setPosition(
+        std::round(w - hitSize - inset + (hitSize - glyphW) * 0.5f), std::round(inset + (hitSize - glyphH) * 0.5f)
+    );
+  }
+
+  if (m_modeBadge != nullptr) {
+    const float btnW = m_modeBadge->width() > 0.0f ? m_modeBadge->width() : overlayControlSize(m_contentScale);
+    const float btnH = m_modeBadge->height() > 0.0f ? m_modeBadge->height() : btnW;
+    m_modeBadge->setPosition(std::round(inset), std::round(h - btnH - inset));
+    m_modeBadge->setSize(btnW, btnH);
+  }
+
+  if (m_folderGlyph != nullptr) {
+    const float folderSize = m_folderGlyph->width() > 0.0f ? m_folderGlyph->width() : std::min(w, h) * 0.45f;
+    m_folderGlyph->setPosition(std::round((w - folderSize) * 0.5f), std::round((h - folderSize) * 0.5f));
+  }
+
+  if (m_loadingGlyph != nullptr) {
+    const float loadingSize = m_loadingGlyph->width() > 0.0f ? m_loadingGlyph->width() : std::min(w, h) * 0.32f;
+    m_loadingGlyph->setPosition(std::round((w - loadingSize) * 0.5f), std::round((h - loadingSize) * 0.5f));
+  }
+}
+
 void WallpaperTile::setCellSize(float cellWidth, float cellHeight) {
   m_cellWidth = cellWidth;
   m_cellHeight = cellHeight;
@@ -119,37 +227,43 @@ void WallpaperTile::setCellSize(float cellWidth, float cellHeight) {
   const float padding = Style::spaceXs * m_contentScale;
   const float innerGap = Style::spaceXs * m_contentScale;
   const float labelH = Style::fontSizeCaption * m_contentScale * 1.4f;
-  const float frameWidth = std::max(0.0f, cellWidth - padding * 2.0f);
-  const float frameHeight = std::max(0.0f, cellHeight - padding * 2.0f - innerGap - labelH);
+  m_thumbFrameWidth = std::max(0.0f, cellWidth - padding * 2.0f);
+  m_thumbFrameHeight = std::max(0.0f, cellHeight - padding * 2.0f - innerGap - labelH);
 
   if (m_layout != nullptr) {
     m_layout->setGap(innerGap);
     m_layout->setPadding(padding);
     m_layout->setFrameSize(cellWidth, cellHeight);
   }
-  if (m_thumbBox != nullptr) {
-    m_thumbBox->setMinWidth(frameWidth);
-    m_thumbBox->setMinHeight(frameHeight);
-    m_thumbBox->setFrameSize(frameWidth, frameHeight);
-  }
-  if (m_thumb != nullptr) {
-    m_thumb->setFrameSize(frameWidth, frameHeight);
+  if (m_thumbHost != nullptr) {
+    m_thumbHost->setFrameSize(m_thumbFrameWidth, m_thumbFrameHeight);
   }
   if (m_folderGlyph != nullptr) {
-    m_folderGlyph->setGlyphSize(std::min(frameWidth, frameHeight) * 0.45f);
+    m_folderGlyph->setGlyphSize(std::min(m_thumbFrameWidth, m_thumbFrameHeight) * 0.45f);
   }
   if (m_loadingGlyph != nullptr) {
-    m_loadingGlyph->setGlyphSize(std::min(frameWidth, frameHeight) * 0.32f);
+    m_loadingGlyph->setGlyphSize(std::min(m_thumbFrameWidth, m_thumbFrameHeight) * 0.32f);
   }
   if (m_label != nullptr) {
-    m_label->setMaxWidth(frameWidth);
+    m_label->setMaxWidth(m_thumbFrameWidth);
+  }
+
+  layoutThumbOverlays();
+}
+
+void WallpaperTile::doLayout(Renderer& renderer) {
+  InputArea::doLayout(renderer);
+  if (m_starGlyph != nullptr) {
+    m_starGlyph->measure(renderer);
+  }
+  layoutThumbOverlays();
+  if (m_modeBadge != nullptr) {
+    m_modeBadge->layout(renderer);
   }
 }
 
-void WallpaperTile::doLayout(Renderer& renderer) { InputArea::doLayout(renderer); }
-
 void WallpaperTile::setEntry(const WallpaperEntry& entry, Renderer& renderer) {
-  const std::string newPath = entry.isDir ? std::string{} : entry.absPath.string();
+  const std::string pathString = entry.isDir ? std::string{} : entry.absPath.string();
   const bool sameEntry =
       m_hasEntry && m_entry.absPath == entry.absPath && m_entry.name == entry.name && m_entry.isDir == entry.isDir;
   if (sameEntry) {
@@ -158,27 +272,39 @@ void WallpaperTile::setEntry(const WallpaperEntry& entry, Renderer& renderer) {
     return;
   }
 
-  if (m_thumbPath != newPath) {
+  if (m_thumbPath != pathString) {
     releaseThumbnail();
   }
 
   m_entry = entry;
   m_hasEntry = true;
+  m_missingFile = false;
   setVisible(true);
 
   m_label->setText(entry.name);
+
+  if (m_starGlyph != nullptr) {
+    m_starGlyph->setVisible(!entry.isDir);
+  }
 
   if (entry.isDir) {
     m_thumb->clear(renderer);
     m_thumb->setVisible(false);
     m_loadingThumbnail = false;
+    if (m_thumbHost != nullptr) {
+      m_thumbHost->setFill(clearColorSpec());
+    }
     if (m_folderGlyph != nullptr) {
       m_folderGlyph->setVisible(true);
     }
     if (m_loadingGlyph != nullptr) {
       m_loadingGlyph->setVisible(false);
     }
+    if (m_modeBadge != nullptr) {
+      m_modeBadge->setVisible(false);
+    }
     applyVisualState();
+    layoutThumbOverlays();
     return;
   }
 
@@ -188,12 +314,45 @@ void WallpaperTile::setEntry(const WallpaperEntry& entry, Renderer& renderer) {
   if (m_loadingGlyph != nullptr) {
     m_loadingGlyph->setVisible(false);
   }
+
+  Color colorFill;
+  if (parseColorWallpaperPath(pathString, colorFill)) {
+    m_thumbPath.clear();
+    m_thumb->clear(renderer);
+    m_thumb->setVisible(false);
+    m_loadingThumbnail = false;
+    if (m_thumbHost != nullptr) {
+      m_thumbHost->setFill(fixedColorSpec(colorFill));
+    }
+    applyVisualState();
+    layoutThumbOverlays();
+    return;
+  }
+
+  if (m_thumbHost != nullptr) {
+    m_thumbHost->setFill(clearColorSpec());
+  }
   m_thumb->setVisible(true);
-  m_thumbPath = newPath;
+  m_thumbPath = pathString;
+
+  std::error_code ec;
+  if (!pathString.empty() && !std::filesystem::exists(entry.absPath, ec)) {
+    m_missingFile = true;
+    m_thumb->clear(renderer);
+    m_thumb->setVisible(false);
+    if (m_loadingGlyph != nullptr) {
+      m_loadingGlyph->setVisible(true);
+      m_loadingGlyph->setGlyph("photo-off");
+    }
+    applyVisualState();
+    layoutThumbOverlays();
+    return;
+  }
 
   if (m_thumbnails == nullptr) {
     m_thumb->clear(renderer);
     applyVisualState();
+    layoutThumbOverlays();
     return;
   }
 
@@ -202,6 +361,7 @@ void WallpaperTile::setEntry(const WallpaperEntry& entry, Renderer& renderer) {
   }
   refreshThumbnail(renderer);
   applyVisualState();
+  layoutThumbOverlays();
 }
 
 void WallpaperTile::clearEntry(Renderer& renderer) {
@@ -278,6 +438,31 @@ void WallpaperTile::setCurrent(bool current) {
 }
 
 void WallpaperTile::setOnTileClick(ClickCallback callback) { m_onClick = std::move(callback); }
+void WallpaperTile::setOnStarClick(std::function<void(const WallpaperEntry&)> callback) {
+  m_onStarClick = std::move(callback);
+}
+
+void WallpaperTile::setFavoriteState(bool favorited, std::optional<ThemeMode> themeModeBadge) {
+  m_favorited = favorited;
+  m_themeModeBadge = themeModeBadge;
+  if (m_starGlyph != nullptr) {
+    m_starGlyph->setVisible(m_hasEntry && !m_entry.isDir);
+  }
+  if (m_modeBadge != nullptr) {
+    if (themeModeBadge == ThemeMode::Light) {
+      m_modeBadge->setGlyph("sun");
+      m_modeBadge->setVisible(true);
+    } else if (themeModeBadge == ThemeMode::Dark) {
+      m_modeBadge->setGlyph("moon");
+      m_modeBadge->setVisible(true);
+    } else {
+      m_modeBadge->setVisible(false);
+    }
+  }
+  applyStarVisualState();
+  applyVisualState();
+  layoutThumbOverlays();
+}
 void WallpaperTile::setOnTileMotion(HoverCallback callback) { m_onMotion = std::move(callback); }
 void WallpaperTile::setOnTileEnter(HoverCallback callback) { m_onEnter = std::move(callback); }
 void WallpaperTile::setOnTileLeave(HoverCallback callback) { m_onLeave = std::move(callback); }
@@ -290,12 +475,37 @@ void WallpaperTile::setHoveredVisual(bool hovered) {
   applyVisualState();
 }
 
+void WallpaperTile::setStarHovered(bool hovered) {
+  if (m_starHoveredVisual == hovered) {
+    return;
+  }
+  m_starHoveredVisual = hovered;
+  applyStarVisualState();
+}
+
+void WallpaperTile::applyStarVisualState() {
+  if (m_starGlyph == nullptr) {
+    return;
+  }
+
+  if (m_favorited) {
+    m_starGlyph->setGlyph("star-filled");
+    m_starGlyph->setColor(colorSpecFromRole(ColorRole::Primary));
+  } else if (m_starHoveredVisual) {
+    m_starGlyph->setGlyph("star");
+    m_starGlyph->setColor(colorSpecFromRole(ColorRole::Primary));
+  } else {
+    m_starGlyph->setGlyph("star");
+    m_starGlyph->setColor(colorSpecFromRole(ColorRole::OnSurface));
+  }
+}
+
 void WallpaperTile::applyVisualState() {
-  if (m_thumbBox == nullptr || m_thumb == nullptr) {
+  if (m_thumbHost == nullptr || m_thumb == nullptr) {
     return;
   }
   const bool active = m_selected || m_hoveredVisual || m_current;
-  setOpacity(1.0f);
+  setOpacity(m_missingFile ? 0.45f : 1.0f);
   m_thumb->setTint(active ? rgba(1.0f, 1.0f, 1.0f, 1.0f) : rgba(0.5f, 0.5f, 0.5f, 1.0f));
 
   const float outlineWidth = Style::borderWidth * 3.0f;
@@ -308,12 +518,12 @@ void WallpaperTile::applyVisualState() {
   ColorSpec frameBg = colorSpecFromRole(ColorRole::SurfaceVariant);
   m_label->setColor(labelColor);
 
-  m_thumbBox->setFill(frameBg);
+  m_thumbHost->setFill(frameBg);
   if (m_entry.isDir) {
-    m_thumbBox->setBorder(borderColor, outlineWidth);
+    m_thumbHost->setBorder(borderColor, outlineWidth);
     m_thumb->setBorder(colorSpecFromRole(ColorRole::Outline), outlineWidth);
   } else {
-    m_thumbBox->clearBorder();
+    m_thumbHost->clearBorder();
     m_thumb->setBorder(borderColor, outlineWidth);
   }
 }

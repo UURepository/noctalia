@@ -7,6 +7,7 @@
 #include "render/core/render_styles.h"
 #include "render/core/shared_texture_cache.h"
 #include "render/render_context.h"
+#include "shell/wallpaper/wallpaper_paths.h"
 #include "ui/controls/box.h"
 #include "ui/palette.h"
 #include "util/file_utils.h"
@@ -106,40 +107,6 @@ namespace {
     }
   }
 
-  const WallpaperMonitorOverride*
-  findWallpaperMonitorOverride(const WallpaperConfig& config, const WaylandOutput& output) {
-    for (const auto& ovr : config.monitorOverrides) {
-      if (outputMatchesSelector(ovr.match, output)) {
-        return &ovr;
-      }
-    }
-    return nullptr;
-  }
-
-  std::string resolveWallpaperDirectory(const WallpaperConfig& config, const WaylandOutput& output, ThemeMode mode) {
-    if (config.perMonitorDirectories) {
-      if (const auto* ovr = findWallpaperMonitorOverride(config, output); ovr != nullptr) {
-        if (mode == ThemeMode::Light && ovr->directoryLight.has_value() && !ovr->directoryLight->empty()) {
-          return *ovr->directoryLight;
-        }
-        if (mode == ThemeMode::Dark && ovr->directoryDark.has_value() && !ovr->directoryDark->empty()) {
-          return *ovr->directoryDark;
-        }
-        if (ovr->directory.has_value() && !ovr->directory->empty()) {
-          return *ovr->directory;
-        }
-      }
-    }
-    // Fallback to global directory
-    if (mode == ThemeMode::Light && !config.directoryLight.empty()) {
-      return config.directoryLight;
-    }
-    if (mode == ThemeMode::Dark && !config.directoryDark.empty()) {
-      return config.directoryDark;
-    }
-    return config.directory;
-  }
-
   std::string pickRandomWallpaperPath(const std::vector<std::string>& candidates, const std::string& currentPath) {
     if (candidates.empty()) {
       return {};
@@ -198,7 +165,7 @@ namespace {
 
   Color resolveWallpaperFillColor(const WallpaperConfig& config, const WaylandOutput& output) {
     const ColorSpec* fillColor = nullptr;
-    if (const auto* ovr = findWallpaperMonitorOverride(config, output); ovr != nullptr && ovr->fillColor) {
+    if (const auto* ovr = wallpaper::findWallpaperMonitorOverride(config, output); ovr != nullptr && ovr->fillColor) {
       fillColor = &*ovr->fillColor;
     } else if (config.fillColor) {
       fillColor = &*config.fillColor;
@@ -485,7 +452,7 @@ void Wallpaper::syncInstances() {
     }
 
     // Check if a monitor override now disables this output
-    if (const auto* ovr = findWallpaperMonitorOverride(m_config->config().wallpaper, *output);
+    if (const auto* ovr = wallpaper::findWallpaperMonitorOverride(m_config->config().wallpaper, *output);
         ovr != nullptr && ovr->enabled && !*ovr->enabled) {
       kLog.info("removing instance for {} — disabled by monitor override", output->connectorName);
       releaseInstanceTextures(*inst);
@@ -509,7 +476,7 @@ void Wallpaper::syncInstances() {
     }
 
     bool enabled = true;
-    if (const auto* ovr = findWallpaperMonitorOverride(m_config->config().wallpaper, output);
+    if (const auto* ovr = wallpaper::findWallpaperMonitorOverride(m_config->config().wallpaper, output);
         ovr != nullptr && ovr->enabled) {
       enabled = *ovr->enabled;
     }
@@ -539,9 +506,7 @@ void Wallpaper::runAutomation(std::int64_t minuteStamp) {
     return;
   }
 
-  const ThemeMode mode = wallpaper.perMonitorDirectories
-      ? (m_config->config().theme.mode == ThemeMode::Light ? ThemeMode::Light : ThemeMode::Dark)
-      : ThemeMode::Dark;
+  const ThemeMode mode = m_config->config().theme.mode;
 
   ConfigService::WallpaperBatch batch(*m_config);
 
@@ -560,8 +525,8 @@ void Wallpaper::runAutomation(std::int64_t minuteStamp) {
         }
       }
       std::vector<std::string> candidates;
-      const std::string dir =
-          output != nullptr ? resolveWallpaperDirectory(wallpaper, *output, mode) : wallpaper.directory;
+      const std::string dir = output != nullptr ? wallpaper::resolveWallpaperDirectory(wallpaper, *output, mode)
+                                                : wallpaper::resolveGlobalWallpaperDirectory(wallpaper, mode);
       collectWallpaperCandidates(dir, automation.recursive, candidates);
       if (candidates.empty()) {
         continue;
@@ -578,7 +543,8 @@ void Wallpaper::runAutomation(std::int64_t minuteStamp) {
     }
   } else {
     std::vector<std::string> candidates;
-    collectWallpaperCandidates(wallpaper.directory, automation.recursive, candidates);
+    const std::string dir = wallpaper::resolveGlobalWallpaperDirectory(wallpaper, mode);
+    collectWallpaperCandidates(dir, automation.recursive, candidates);
     if (!candidates.empty()) {
       const std::string currentDefault = m_config->getDefaultWallpaperPath();
       const std::string picked = automation.order == WallpaperAutomationConfig::Order::Alphabetical
@@ -640,8 +606,8 @@ bool Wallpaper::switchToRandomWallpaper(std::optional<std::string_view> connecto
       }
     }
     std::vector<std::string> candidates;
-    const std::string dir =
-        output != nullptr ? resolveWallpaperDirectory(wallpaper, *output, mode) : wallpaper.directory;
+    const std::string dir = output != nullptr ? wallpaper::resolveWallpaperDirectory(wallpaper, *output, mode)
+                                              : wallpaper::resolveGlobalWallpaperDirectory(wallpaper, mode);
     collectWallpaperCandidates(dir, wallpaper.automation.recursive, candidates);
     if (candidates.empty()) {
       return false;
@@ -674,8 +640,8 @@ bool Wallpaper::switchToRandomWallpaper(std::optional<std::string_view> connecto
         }
       }
       std::vector<std::string> candidates;
-      const std::string dir =
-          output != nullptr ? resolveWallpaperDirectory(wallpaper, *output, mode) : wallpaper.directory;
+      const std::string dir = output != nullptr ? wallpaper::resolveWallpaperDirectory(wallpaper, *output, mode)
+                                                : wallpaper::resolveGlobalWallpaperDirectory(wallpaper, mode);
       collectWallpaperCandidates(dir, wallpaper.automation.recursive, candidates);
       if (candidates.empty()) {
         continue;
@@ -691,7 +657,8 @@ bool Wallpaper::switchToRandomWallpaper(std::optional<std::string_view> connecto
     }
   } else {
     std::vector<std::string> candidates;
-    collectWallpaperCandidates(wallpaper.directory, wallpaper.automation.recursive, candidates);
+    const std::string dir = wallpaper::resolveGlobalWallpaperDirectory(wallpaper, mode);
+    collectWallpaperCandidates(dir, wallpaper.automation.recursive, candidates);
     if (!candidates.empty()) {
       const std::string currentDefault = m_config->getDefaultWallpaperPath();
       const std::string picked = pickRandomWallpaperPath(candidates, currentDefault);

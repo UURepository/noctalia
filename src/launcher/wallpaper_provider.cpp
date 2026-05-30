@@ -1,6 +1,7 @@
 #include "launcher/wallpaper_provider.h"
 
 #include "config/config_service.h"
+#include "shell/wallpaper/wallpaper_paths.h"
 #include "util/fuzzy_match.h"
 #include "util/string_utils.h"
 #include "wayland/wayland_connection.h"
@@ -23,16 +24,6 @@ namespace {
   bool hasImageExtension(const std::filesystem::path& path) {
     const auto ext = StringUtils::toLower(path.extension().string());
     return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".bmp" || ext == ".gif";
-  }
-
-  std::filesystem::path wallpaperDirectory(const WallpaperConfig& wallpaper, ThemeMode mode) {
-    if (mode == ThemeMode::Light && !wallpaper.directoryLight.empty()) {
-      return wallpaper.directoryLight;
-    }
-    if (mode == ThemeMode::Dark && !wallpaper.directoryDark.empty()) {
-      return wallpaper.directoryDark;
-    }
-    return wallpaper.directory;
   }
 
   std::vector<WallpaperCandidate> collectWallpapers(const std::filesystem::path& directory) {
@@ -83,7 +74,9 @@ std::vector<LauncherResult> WallpaperProvider::query(std::string_view text) cons
   }
 
   const std::string query = StringUtils::toLower(StringUtils::trim(text));
-  auto candidates = collectWallpapers(wallpaperDirectory(m_config->config().wallpaper, m_config->config().theme.mode));
+  auto candidates = collectWallpapers(
+      wallpaper::resolveGlobalWallpaperDirectory(m_config->config().wallpaper, m_config->config().theme.mode)
+  );
   if (candidates.empty()) {
     return {};
   }

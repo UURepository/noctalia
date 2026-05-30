@@ -68,6 +68,19 @@ public:
   void setWallpaperPath(const std::optional<std::string>& connectorName, const std::string& path);
   void setWallpaperChangeCallback(ChangeCallback callback);
 
+  [[nodiscard]] const std::vector<WallpaperFavorite>& wallpaperFavorites() const noexcept;
+  [[nodiscard]] bool isWallpaperFavorite(std::string_view path) const;
+  [[nodiscard]] const WallpaperFavorite* wallpaperFavorite(std::string_view path) const;
+  void addWallpaperFavorite(std::string path);
+  void removeWallpaperFavorite(std::string_view path);
+  void setWallpaperFavoriteThemeMode(std::string_view path, ThemeMode themeMode);
+  void setWallpaperFavoritePaletteSource(std::string_view path, std::optional<PaletteSource> source);
+  void setWallpaperFavoritePaletteSelection(std::string_view path, std::string_view value);
+  void applyWallpaperSelection(
+      const std::optional<std::string>& connectorName, const std::string& path, const WallpaperFavorite* applyTheme,
+      const std::vector<std::string>& allConnectors
+  );
+
   // Persist a theme-mode override to settings.toml and trigger the reload pipeline.
   void setThemeMode(ThemeMode mode);
   // Persist `[theme].wallpaper_scheme` (palette-from-wallpaper generation) and reload. Returns false if unknown.
@@ -117,6 +130,7 @@ private:
   bool writeOverridesToFile();
   void extractWallpaperFromOverrides();
   void extractWallpaperFromTable(const toml::table& table);
+  void syncWallpaperFavoritesToOverridesTable();
 
   Config m_config;
 
@@ -138,6 +152,7 @@ private:
   std::string m_defaultWallpaperPath;
   std::string m_lastWallpaperPath;
   std::unordered_map<std::string, std::string> m_monitorWallpaperPaths;
+  std::vector<WallpaperFavorite> m_wallpaperFavorites;
   mutable std::unordered_map<std::string, bool> m_effectiveOverrideCache;
 
   std::string m_overridesParseError;

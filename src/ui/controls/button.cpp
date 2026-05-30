@@ -314,6 +314,14 @@ void Button::setHoverSuppressed(bool suppressed) {
   applyVisualState();
 }
 
+void Button::setHoveredVisual(bool hovered) {
+  if (m_hoveredVisual == hovered) {
+    return;
+  }
+  m_hoveredVisual = hovered;
+  applyVisualState();
+}
+
 void Button::setCursorShape(std::uint32_t shape) {
   if (m_inputArea != nullptr) {
     m_inputArea->setCursorShape(shape);
@@ -521,7 +529,7 @@ void Button::applyColors(const Color& bg, const Color& border, const Color& labe
 }
 
 void Button::resolveVisualStateColors(Color& targetBg, Color& targetBorder, Color& targetLabel) const {
-  bool isHovered = m_enabled && (!m_hoverSuppressed && hovered());
+  bool isHovered = m_enabled && (m_hoveredVisual || (!m_hoverSuppressed && hovered()));
   bool isPressed = m_enabled && pressed();
   bool isSelected = m_enabled && m_selected;
 

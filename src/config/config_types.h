@@ -892,6 +892,18 @@ constexpr EnumOption<ThemeMode> kThemeModes[] = {
     {ThemeMode::Auto, "auto", "common.states.auto"},
 };
 
+struct WallpaperFavorite {
+  std::string path;
+  ThemeMode themeMode = ThemeMode::Auto;
+  std::optional<PaletteSource> paletteSource;
+  std::string builtinPalette;
+  std::string communityPalette;
+  std::string customPalette;
+  std::string wallpaperScheme;
+
+  bool operator==(const WallpaperFavorite&) const = default;
+};
+
 enum class ControlCenterSidebarMode : std::uint8_t {
   Full = 0,
   Compact = 1,

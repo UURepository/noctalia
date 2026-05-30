@@ -93,6 +93,7 @@ void VirtualGridView::setAdapter(VirtualGridAdapter* adapter) {
   m_slotBoundIndex.clear();
   m_selectedIndex.reset();
   m_hoveredIndex.reset();
+  m_hoveredOverlayIndex.reset();
   markLayoutDirty();
 }
 
@@ -321,6 +322,7 @@ void VirtualGridView::doLayout(Renderer& renderer) {
     m_slotBoundIndex.emplace_back();
     m_slotBoundSelected.push_back(false);
     m_slotBoundHovered.push_back(false);
+    m_slotBoundOverlayHovered.push_back(false);
   }
 
   // Step 4: bind / position pool slots, addressing by `row % poolRows`.
@@ -354,6 +356,7 @@ void VirtualGridView::doLayout(Renderer& renderer) {
 
         const bool selected = m_selectedIndex.has_value() && *m_selectedIndex == logicalIndex;
         const bool hovered = m_hoveredIndex.has_value() && *m_hoveredIndex == logicalIndex;
+        const bool overlayHovered = m_hoveredOverlayIndex.has_value() && *m_hoveredOverlayIndex == logicalIndex;
         const bool dirty = !m_slotBoundIndex[slot].has_value()
             || *m_slotBoundIndex[slot] != logicalIndex
             || m_slotBoundSelected[slot] != selected
@@ -363,6 +366,10 @@ void VirtualGridView::doLayout(Renderer& renderer) {
           m_slotBoundIndex[slot] = logicalIndex;
           m_slotBoundSelected[slot] = selected;
           m_slotBoundHovered[slot] = hovered;
+        }
+        if (m_slotBoundOverlayHovered[slot] != overlayHovered) {
+          m_adapter->applyOverlayHover(*tile, overlayHovered);
+          m_slotBoundOverlayHovered[slot] = overlayHovered;
         }
         tile->setVisible(true);
         // Canvas's doLayout is a no-op, so we lay out each pool tile explicitly
@@ -376,6 +383,7 @@ void VirtualGridView::doLayout(Renderer& renderer) {
     if (!slotActive[slot] && m_pool[slot] != nullptr) {
       m_pool[slot]->setVisible(false);
       m_slotBoundIndex[slot].reset();
+      m_slotBoundOverlayHovered[slot] = false;
     }
   }
 
@@ -413,18 +421,42 @@ void VirtualGridView::onPointerEnter(float localX, float localY) { onPointerMoti
 
 void VirtualGridView::onPointerMotion(float localX, float localY) {
   const auto idx = indexAt(localX, localY);
-  if (idx == m_hoveredIndex) {
+
+  std::optional<std::size_t> overlayIdx;
+  if (idx.has_value() && m_adapter != nullptr) {
+    float cellLocalX = 0.0f;
+    float cellLocalY = 0.0f;
+    cellLocalAt(localX, localY, *idx, cellLocalX, cellLocalY);
+    if (m_adapter->overlayHitTest(*idx, cellLocalX, cellLocalY, m_cellWidth, m_cellHeightResolved)) {
+      overlayIdx = idx;
+    }
+  }
+
+  if (idx == m_hoveredIndex && overlayIdx == m_hoveredOverlayIndex) {
     return;
   }
+
+  if (m_hoveredOverlayIndex.has_value() && m_hoveredOverlayIndex != overlayIdx) {
+    setOverlayHoveredForIndex(*m_hoveredOverlayIndex, false);
+  }
+  if (overlayIdx.has_value() && overlayIdx != m_hoveredOverlayIndex) {
+    setOverlayHoveredForIndex(*overlayIdx, true);
+  }
+
   m_hoveredIndex = idx;
+  m_hoveredOverlayIndex = overlayIdx;
   markLayoutDirty();
 }
 
 void VirtualGridView::onPointerLeave() {
-  if (!m_hoveredIndex.has_value()) {
+  if (!m_hoveredIndex.has_value() && !m_hoveredOverlayIndex.has_value()) {
     return;
   }
+  if (m_hoveredOverlayIndex.has_value()) {
+    setOverlayHoveredForIndex(*m_hoveredOverlayIndex, false);
+  }
   m_hoveredIndex.reset();
+  m_hoveredOverlayIndex.reset();
   markLayoutDirty();
 }
 
@@ -434,9 +466,20 @@ void VirtualGridView::onPointerPress(float localX, float localY) {
     return;
   }
   setSelectedIndex(idx);
-  if (m_adapter != nullptr) {
-    m_adapter->onActivate(*idx);
+  if (m_adapter == nullptr) {
+    return;
   }
+
+  const float colStride = m_cellWidth + m_columnGap;
+  const float rowStride = m_cellHeightResolved + m_rowGap;
+  const auto col = *idx % m_layoutColumns;
+  const auto row = *idx / m_layoutColumns;
+  const float cellLocalX = localX - static_cast<float>(col) * colStride;
+  const float cellLocalY = localY - static_cast<float>(row) * rowStride;
+  if (m_adapter->onPointerPress(*idx, cellLocalX, cellLocalY, m_cellWidth, m_cellHeightResolved)) {
+    return;
+  }
+  m_adapter->onActivate(*idx);
 }
 
 void VirtualGridView::onSecondaryPointerPress(float localX, float localY) {
@@ -482,4 +525,33 @@ std::optional<std::size_t> VirtualGridView::indexAt(float localX, float localY) 
     return std::nullopt;
   }
   return idx;
+}
+
+void VirtualGridView::cellLocalAt(
+    float localX, float localY, std::size_t index, float& cellLocalX, float& cellLocalY
+) const noexcept {
+  const float colStride = m_cellWidth + m_columnGap;
+  const float rowStride = m_cellHeightResolved + m_rowGap;
+  const auto col = index % m_layoutColumns;
+  const auto row = index / m_layoutColumns;
+  cellLocalX = localX - static_cast<float>(col) * colStride;
+  cellLocalY = localY - static_cast<float>(row) * rowStride;
+}
+
+void VirtualGridView::setOverlayHoveredForIndex(std::size_t index, bool hovered) {
+  if (m_adapter == nullptr) {
+    return;
+  }
+  for (std::size_t slot = 0; slot < m_pool.size(); ++slot) {
+    if (!m_slotBoundIndex[slot].has_value() || *m_slotBoundIndex[slot] != index) {
+      continue;
+    }
+    if (m_slotBoundOverlayHovered[slot] == hovered) {
+      return;
+    }
+    m_adapter->applyOverlayHover(*m_pool[slot], hovered);
+    m_slotBoundOverlayHovered[slot] = hovered;
+    markPaintDirty();
+    return;
+  }
 }
