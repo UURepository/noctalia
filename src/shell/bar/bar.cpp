@@ -607,7 +607,10 @@ namespace {
 
     float cachedBodyExtent = -1.0f;
     float cachedBodyExtentScale = -1.0f;
-    auto finalizeCapsules = [isVertical, slotCross, &renderer, &cachedBodyExtent,
+    // Capsules sit a small fixed margin in from the bar edges; keyed on the bar's scale (not any
+    // per-widget scale) so every capsule keeps the same cross-size.
+    const float capsuleCrossInset = std::round(Style::spaceXs * instance.barConfig.scale);
+    auto finalizeCapsules = [isVertical, slotCross, capsuleCrossInset, &renderer, &cachedBodyExtent,
                              &cachedBodyExtentScale](std::vector<BarCapsuleRun>& runs) {
       for (auto& run : runs) {
         Node* shell = run.shell;
@@ -650,11 +653,10 @@ namespace {
         const float iconExtent = std::max(bodyExtent, std::round(Style::barGlyphSize * scale));
         const float pad = run.spec.padding * scale;
         const float padMain = pad;
-        const float padCross = std::min(pad, Style::spaceXs * scale);
-        float capsuleCross = bodyExtent + 2.0f * padCross;
-        if (isVertical) {
-          capsuleCross = std::min(capsuleCross, slotCross);
-        }
+        // Cross-size is the bar thickness minus a small edge margin, independent of per-widget content
+        // scale: scaling a widget enlarges its glyph/text inside the fixed-height pill rather than
+        // resizing the capsule (so a differently scaled member can't grow or split its capsule group).
+        const float capsuleCross = std::max(1.0f, slotCross - 2.0f * capsuleCrossInset);
         float shellMain = (isVertical ? ih : iw) + 2.0f * padMain;
         float shellCross = capsuleCross;
         float shellW = isVertical ? shellCross : shellMain;
@@ -1679,7 +1681,8 @@ void Bar::attachWidgetsToSections(BarInstance& instance) {
     };
 
     // Members of the same group share one resolved style by construction (see resolveWidgetBarCapsuleSpec),
-    // so adjacency + matching group ID + equal content scale is sufficient to merge.
+    // so adjacency + matching group ID is sufficient to merge. Per-widget scale does not split the group:
+    // the run is sized from its largest member's scale below so a differently scaled member still fits.
     auto canJoinCapsuleGroup = [](const Widget& first, const Widget& next) {
       const auto& firstSpec = first.barCapsuleSpec();
       const auto& nextSpec = next.barCapsuleSpec();
@@ -1688,8 +1691,7 @@ void Bar::attachWidgetsToSections(BarInstance& instance) {
           && !first.isAnchor()
           && !next.isAnchor()
           && !firstSpec.group.empty()
-          && firstSpec.group == nextSpec.group
-          && first.contentScale() == next.contentScale();
+          && firstSpec.group == nextSpec.group;
     };
 
     std::size_t index = 0;
