@@ -387,9 +387,9 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
 
     const bool groupedHorizontalPill = m_groupByWorkspace && !m_vertical;
     const bool iconOddSpareOnEnd = !groupedHorizontalPill;
+    const float iconInsetX = centeredOffset(tileSize, iconSize);
+    const float iconInsetY = centeredOffset(tileSize, iconSize, 0.0f, iconOddSpareOnEnd);
     if (!task.iconPath.empty()) {
-      const float iconInsetX = centeredOffset(tileSize, iconSize);
-      const float iconInsetY = centeredOffset(tileSize, iconSize, 0.0f, iconOddSpareOnEnd);
       auto image = ui::image({
           .fit = ImageFit::Contain,
           .width = iconSize,
@@ -397,7 +397,17 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
       });
       image->setPosition(iconInsetX, iconInsetY);
       image->setSourceFile(renderer, task.iconPath, static_cast<int>(std::round(48.0f * m_contentScale)), true);
-      area->addChild(std::move(image));
+      if (image->hasImage()) {
+        area->addChild(std::move(image));
+      } else {
+        auto glyph = ui::glyph({
+            .glyph = "app-window",
+            .glyphSize = iconSize,
+        });
+        glyph->measure(renderer);
+        glyph->setPosition(iconInsetX, iconInsetY);
+        area->addChild(std::move(glyph));
+      }
     } else {
       auto glyph = ui::glyph({
           .glyph = "apps",
@@ -428,8 +438,6 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
       const float dotGap = std::round(std::max(1.0f, dotSize * 0.55f));
       const float runHeight =
           dotSize * static_cast<float>(dotCount) + dotGap * static_cast<float>(dotCount > 0 ? dotCount - 1 : 0);
-      const float iconInsetX = centeredOffset(tileSize, iconSize);
-      const float iconInsetY = centeredOffset(tileSize, iconSize, 0.0f, iconOddSpareOnEnd);
       const float iconRightInset = std::round(std::max(1.0f, iconSize * 0.08f));
       const float dotX = std::round(iconInsetX + iconSize - dotSize - iconRightInset);
       const float startY = std::round(iconInsetY + (iconSize - runHeight) * 0.5f);
@@ -1012,10 +1020,10 @@ void TaskbarWidget::updateModels() {
   std::vector<TaskModel> nextTasks;
   std::unordered_set<std::uintptr_t> processedHandles;
   for (const auto& run : resolvedRunning) {
-    const std::string idLower = !run.entry.id.empty() ? toLower(run.entry.id) : run.runningLower;
-    const std::string startupLower = toLower(run.entry.startupWmClass);
+    const std::string idLower = run.runningLower;
+    const std::string startupLower =
+        !run.entry.startupWmClass.empty() ? toLower(run.entry.startupWmClass) : run.runningLower;
     const std::string nameLower = !run.entry.nameLower.empty() ? run.entry.nameLower : run.runningLower;
-    const std::string appId = !run.entry.id.empty() ? run.entry.id : run.runningAppId;
 
     const auto windows = m_platform.windowsForApp(idLower, startupLower, topFilter);
     for (const auto& window : windows) {
@@ -1028,7 +1036,7 @@ void TaskbarWidget::updateModels() {
       TaskModel task{};
       task.handleKey = handleKey;
       task.order = window.order;
-      task.appId = !window.appId.empty() ? window.appId : appId;
+      task.appId = !window.appId.empty() ? window.appId : run.runningAppId;
       task.idLower = idLower;
       task.startupWmClassLower = startupLower;
       task.nameLower = nameLower;
@@ -1036,7 +1044,7 @@ void TaskbarWidget::updateModels() {
       task.title = window.title;
       task.active = activeHandle != nullptr && activeHandle == window.handle;
       task.firstHandle = window.handle;
-      task.iconPath = resolveIconPath(task.appId, run.entry.icon);
+      task.iconPath = resolveIconPath(run.runningAppId, run.entry.icon);
       task.workspaceKey = {};
       nextTasks.push_back(std::move(task));
     }
@@ -1986,10 +1994,29 @@ void TaskbarWidget::buildDesktopIconIndex() {
 std::string TaskbarWidget::resolveIconPath(const std::string& appId, const std::string& iconNameOrPath) {
   const int iconTargetSize = static_cast<int>(std::round(48.0f * m_contentScale));
 
+  auto resolveIconName = [this, iconTargetSize](const std::string& name) -> std::string {
+    if (name.empty()) {
+      return {};
+    }
+    return m_iconResolver.resolve(name, iconTargetSize);
+  };
+
   if (!iconNameOrPath.empty()) {
-    const std::string& primary = m_iconResolver.resolve(iconNameOrPath, iconTargetSize);
-    if (!primary.empty()) {
+    if (const std::string primary = resolveIconName(iconNameOrPath); !primary.empty()) {
       return primary;
+    }
+  }
+
+  if (appId.starts_with("steam_app_")) {
+    const app_identity::DesktopEntryLookupOptions steamLookup{
+        .includeHidden = true,
+        .includeNoDisplay = true,
+    };
+    if (const auto entry = app_identity::findDesktopEntry(appId, desktopEntries(), steamLookup);
+        entry.has_value() && !entry->icon.empty()) {
+      if (const std::string steamIcon = resolveIconName(entry->icon); !steamIcon.empty()) {
+        return steamIcon;
+      }
     }
   }
 
@@ -2000,14 +2027,12 @@ std::string TaskbarWidget::resolveIconPath(const std::string& appId, const std::
   const std::string appIdLower = toLower(appId);
   const auto it = m_appIconsByLower.find(appIdLower);
   if (it != m_appIconsByLower.end()) {
-    const std::string& desktopIcon = m_iconResolver.resolve(it->second, iconTargetSize);
-    if (!desktopIcon.empty()) {
+    if (const std::string desktopIcon = resolveIconName(it->second); !desktopIcon.empty()) {
       return desktopIcon;
     }
   }
   if (!appId.empty()) {
-    const std::string& appIcon = m_iconResolver.resolve(appId, iconTargetSize);
-    if (!appIcon.empty()) {
+    if (const std::string appIcon = resolveIconName(appId); !appIcon.empty()) {
       return appIcon;
     }
   }

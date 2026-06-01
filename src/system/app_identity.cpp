@@ -55,9 +55,12 @@ namespace app_identity {
         extendedLookup.includeHidden = true;
         extendedLookup.includeNoDisplay = true;
       }
-      if (const auto matched = findDesktopEntry(runningAppId, allEntries, extendedLookup)) {
+      if (auto matched = findDesktopEntry(runningAppId, allEntries, extendedLookup)) {
+        if (runningAppId.starts_with("steam_app_") && matched->startupWmClass.empty()) {
+          matched->startupWmClass = std::string(runningAppId);
+        }
         return DesktopEntryResolution{
-            .entry = *matched,
+            .entry = std::move(*matched),
             .matchedDesktopEntry = true,
         };
       }
