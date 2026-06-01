@@ -24,6 +24,7 @@
 #include "wayland/wayland_connection.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -34,6 +35,8 @@
 #include <vector>
 
 namespace {
+
+  constexpr auto kSearchDebounceInterval = std::chrono::milliseconds(120);
 
   bool useLightPalettePreview(ThemeMode mode) { return mode == ThemeMode::Light; }
 
@@ -591,10 +594,15 @@ std::unique_ptr<Flex> SettingsWindow::buildFilterRow(
             m_pendingResetPageScope.clear();
 
             if (hadPendingReset || searchActiveChanged) {
+              // Toggling between empty/non-empty changes surrounding chrome and recreates the
+              // search input, so rebuild immediately and restore focus.
+              m_searchDebounceTimer.stop();
               m_focusSearchOnRebuild = true;
               requestSceneRebuild();
             } else {
-              requestContentRebuild();
+              // Typing/deleting within an active query only re-filters the content list. Coalesce
+              // bursts (held backspace, fast typing) so each key repeat doesn't walk the registry.
+              m_searchDebounceTimer.start(kSearchDebounceInterval, [this]() { requestContentRebuild(); });
             }
           },
       })

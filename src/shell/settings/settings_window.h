@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/timer_manager.h"
 #include "render/animation/animation_manager.h"
 #include "render/scene/input_dispatcher.h"
 #include "render/scene/node.h"
@@ -185,6 +186,7 @@ private:
   bool m_scrollToPendingContentTarget = false;
   Node* m_pendingContentScrollTarget = nullptr;
   std::string m_searchQuery;
+  Timer m_searchDebounceTimer;
   // Set by openToBarWidget (e.g. middle-click on a bar widget); consumed once the window holds
   // keyboard focus so the sheet's grab popup gets a serial the compositor accepts.
   std::string m_pendingOpenWidgetInspectorName;
