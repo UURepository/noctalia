@@ -52,6 +52,7 @@ struct RenderImageDraw {
   float height = 0.0f;
   Color tint = rgba(1.0f, 1.0f, 1.0f, 1.0f);
   bool monochromeTint = false;
+  bool alphaMaskTint = false;
   float opacity = 1.0f;
   float radius = 0.0f;
   Color borderColor = rgba(0.0f, 0.0f, 0.0f, 0.0f);

@@ -132,12 +132,26 @@ void Image::setTint(const Color& tint) {
   if (m_image != nullptr) {
     m_image->setTint(tint);
     m_image->setMonochromeTint(false);
+    m_image->setAlphaMaskTint(false);
   }
   m_appIconColorizeTint = std::nullopt;
+  m_foregroundTint = std::nullopt;
 }
 
 void Image::setAppIconColorization(std::optional<ColorSpec> tint) {
   m_appIconColorizeTint = tint;
+  if (tint.has_value()) {
+    m_foregroundTint = std::nullopt;
+  }
+  applyPalette();
+}
+
+void Image::setForegroundTint(std::optional<ColorSpec> tint) {
+  if (m_foregroundTint == tint) {
+    return;
+  }
+  m_foregroundTint = tint;
+  m_appIconColorizeTint = std::nullopt;
   applyPalette();
 }
 
@@ -637,17 +651,29 @@ void Image::reloadColorizedSource() {
 
 void Image::applyPalette() {
   const Color border = resolveColorSpec(m_border);
-  if (m_image != nullptr) {
-    m_image->setBorder(border, m_borderWidth);
-    if (!m_appIconColorizeTint.has_value()) {
-      m_image->setTint(rgba(1.0f, 1.0f, 1.0f, 1.0f));
-      m_image->setMonochromeTint(false);
-    } else {
-      m_image->setTint(rgba(1.0f, 1.0f, 1.0f, 1.0f));
-      m_image->setMonochromeTint(false);
-      reloadColorizedSource();
-    }
+  if (m_image == nullptr) {
+    return;
   }
+
+  m_image->setBorder(border, m_borderWidth);
+  if (m_appIconColorizeTint.has_value()) {
+    m_image->setTint(rgba(1.0f, 1.0f, 1.0f, 1.0f));
+    m_image->setMonochromeTint(false);
+    m_image->setAlphaMaskTint(false);
+    reloadColorizedSource();
+    return;
+  }
+
+  if (m_foregroundTint.has_value()) {
+    m_image->setTint(resolveColorSpec(*m_foregroundTint));
+    m_image->setMonochromeTint(true);
+    m_image->setAlphaMaskTint(true);
+    return;
+  }
+
+  m_image->setTint(rgba(1.0f, 1.0f, 1.0f, 1.0f));
+  m_image->setMonochromeTint(false);
+  m_image->setAlphaMaskTint(false);
 }
 
 void Image::updateLayout() {

@@ -216,12 +216,14 @@ void TrayWidget::refreshAppIconColorization(Renderer& renderer) {
 }
 
 void TrayWidget::create() {
-  const auto markAppIconColorizeDirty = [this]() {
+  m_paletteConn = paletteChanged().connect([this]() {
     m_appIconColorizeDirty = true;
     requestUpdate();
-  };
-  m_paletteConn = paletteChanged().connect(markAppIconColorizeDirty);
-  m_appIconColorizeConn = shellAppIconColorizationChanged().connect(markAppIconColorizeDirty);
+  });
+  m_appIconColorizeConn = shellAppIconColorizationChanged().connect([this]() {
+    m_rebuildPending = true;
+    requestUpdate();
+  });
 
   auto container = ui::flex(
       m_panelGridMode ? FlexDirection::Vertical : FlexDirection::Horizontal,

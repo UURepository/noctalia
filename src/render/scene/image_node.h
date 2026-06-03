@@ -23,6 +23,7 @@ public:
   [[nodiscard]] float borderWidth() const noexcept { return m_borderWidth; }
   [[nodiscard]] ImageFitMode fitMode() const noexcept { return m_fitMode; }
   [[nodiscard]] bool monochromeTint() const noexcept { return m_monochromeTint; }
+  [[nodiscard]] bool alphaMaskTint() const noexcept { return m_alphaMaskTint; }
   [[nodiscard]] int textureWidth() const noexcept { return m_textureWidth; }
   [[nodiscard]] int textureHeight() const noexcept { return m_textureHeight; }
 
@@ -47,6 +48,14 @@ public:
       return;
     }
     m_monochromeTint = enabled;
+    markPaintDirty();
+  }
+
+  void setAlphaMaskTint(bool enabled) {
+    if (m_alphaMaskTint == enabled) {
+      return;
+    }
+    m_alphaMaskTint = enabled;
     markPaintDirty();
   }
 
@@ -88,6 +97,7 @@ private:
   TextureId m_textureId;
   Color m_tint = {1.0f, 1.0f, 1.0f, 1.0f};
   bool m_monochromeTint = false;
+  bool m_alphaMaskTint = false;
   float m_radius = 0.0f;
   Color m_borderColor = {0.0f, 0.0f, 0.0f, 0.0f};
   float m_borderWidth = 0.0f;

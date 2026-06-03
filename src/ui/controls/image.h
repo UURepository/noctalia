@@ -34,6 +34,8 @@ public:
   void setBorder(const Color& color, float width);
   void setTint(const Color& tint);
   void setAppIconColorization(std::optional<ColorSpec> tint);
+  // Shader texel × tint for bar custom_image logos (not CPU app-icon bake).
+  void setForegroundTint(std::optional<ColorSpec> tint);
   void setFit(ImageFit fit);
   void setPadding(float padding);
   void setAsyncReadyCallback(AsyncReadyCallback callback);
@@ -96,6 +98,7 @@ private:
   ColorSpec m_border = clearColorSpec();
   float m_borderWidth = 0.0f;
   std::optional<ColorSpec> m_appIconColorizeTint;
+  std::optional<ColorSpec> m_foregroundTint;
   std::vector<std::uint8_t> m_colorizationSource;
   int m_colorizationSourceWidth = 0;
   int m_colorizationSourceHeight = 0;

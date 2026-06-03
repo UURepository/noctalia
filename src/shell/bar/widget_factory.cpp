@@ -237,7 +237,8 @@ std::unique_ptr<Widget> WidgetFactory::create(
 
     std::string logoPath = wc != nullptr ? wc->getString("custom_image", "") : std::string{};
 
-    auto widget = std::make_unique<ControlCenterWidget>(output, std::move(barGlyph), std::move(logoPath));
+    auto widget =
+        std::make_unique<ControlCenterWidget>(m_configService, output, std::move(barGlyph), std::move(logoPath));
     widget->setContentScale(contentScale);
     return widget;
   }
@@ -283,7 +284,7 @@ std::unique_ptr<Widget> WidgetFactory::create(
 
     std::string logoPath = wc != nullptr ? wc->getString("custom_image", "") : std::string{};
 
-    auto widget = std::make_unique<LauncherWidget>(output, std::move(barGlyph), std::move(logoPath));
+    auto widget = std::make_unique<LauncherWidget>(m_configService, output, std::move(barGlyph), std::move(logoPath));
     widget->setContentScale(contentScale);
     return widget;
   }

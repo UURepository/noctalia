@@ -2,6 +2,7 @@
 
 #include "render/scene/input_area.h"
 #include "render/scene/node.h"
+#include "ui/app_icon_colorization.h"
 #include "ui/builders.h"
 #include "ui/palette.h"
 #include "ui/style.h"
@@ -9,8 +10,10 @@
 #include <algorithm>
 #include <memory>
 
-LauncherWidget::LauncherWidget(wl_output* /*output*/, std::string barGlyphId, std::string logoPath)
-    : m_barGlyphId(std::move(barGlyphId)), m_logoPath(std::move(logoPath)) {}
+LauncherWidget::LauncherWidget(
+    ConfigService& config, wl_output* /*output*/, std::string barGlyphId, std::string logoPath
+)
+    : m_config(config), m_barGlyphId(std::move(barGlyphId)), m_logoPath(std::move(logoPath)) {}
 
 void LauncherWidget::create() {
   auto area = std::make_unique<InputArea>();
@@ -34,8 +37,24 @@ void LauncherWidget::create() {
     );
   }
 
+  if (m_image != nullptr) {
+    m_appIconColorizeConn = shellAppIconColorizationChanged().connect([this]() {
+      refreshCustomImageTint();
+      requestRedraw();
+    });
+  }
+
   setRoot(std::move(area));
 }
+
+void LauncherWidget::refreshCustomImageTint() {
+  if (m_image == nullptr) {
+    return;
+  }
+  m_image->setForegroundTint(effectiveShellCustomBarImageTint(m_config.config().shell, barCapsuleSpec()));
+}
+
+void LauncherWidget::doUpdate(Renderer& /*renderer*/) { refreshCustomImageTint(); }
 
 void LauncherWidget::doLayout(Renderer& renderer, float /*containerWidth*/, float /*containerHeight*/) {
   auto* node = root();
@@ -44,6 +63,7 @@ void LauncherWidget::doLayout(Renderer& renderer, float /*containerWidth*/, floa
   }
 
   if (m_image != nullptr) {
+    refreshCustomImageTint();
     m_image->setSize(Style::barIconSize * m_contentScale, Style::barIconSize * m_contentScale);
     const int logoTargetSize = std::max(1, static_cast<int>(48.0f * m_contentScale));
     m_image->setSourceFile(renderer, m_logoPath, logoTargetSize, true);

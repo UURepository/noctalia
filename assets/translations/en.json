@@ -1658,7 +1658,7 @@
         },
         "app-icon-colorize": {
           "label": "Colorize App Icons",
-          "description": "Recolor dock and tray application icons to match the shell palette"
+          "description": "Recolor dock, tray, taskbar, and bar custom launcher or control center images to match the shell palette"
         },
         "app-icon-color": {
           "label": "App Icon Color",

@@ -1,5 +1,6 @@
 #include "ui/app_icon_colorization.h"
 
+#include "config/config_types.h"
 #include "render/core/color.h"
 #include "ui/palette.h"
 
@@ -33,6 +34,20 @@ namespace {
     return static_cast<std::uint8_t>(std::lround(std::clamp(level, 0.0f, 1.0f) * 255.0f));
   }
 
+  [[nodiscard]] float contrastRatio(const Color& a, const Color& b) noexcept {
+    const float lumA = relativeLuminance(a);
+    const float lumB = relativeLuminance(b);
+    const float lighter = std::max(lumA, lumB);
+    const float darker = std::min(lumA, lumB);
+    return (lighter + 0.05f) / (darker + 0.05f);
+  }
+
+  [[nodiscard]] ColorSpec capsuleBackgroundSpec(const WidgetBarCapsuleSpec& capsule) noexcept {
+    ColorSpec background = capsule.enabled ? capsule.fill : colorSpecFromRole(ColorRole::Surface);
+    background.alpha *= capsule.enabled ? capsule.opacity : 1.0f;
+    return background;
+  }
+
 } // namespace
 
 ShellAppIconColorizationSettings shellAppIconColorizationSettings(const ShellConfig& shell) noexcept {
@@ -54,6 +69,26 @@ std::optional<ColorSpec> effectiveShellAppIconColorizationTint(const ShellConfig
     return shell.appIconColor;
   }
   return defaultAppIconColorizationTint();
+}
+
+std::optional<ColorSpec>
+effectiveShellCustomBarImageTint(const ShellConfig& shell, const WidgetBarCapsuleSpec& capsule) noexcept {
+  if (!shell.appIconColorize) {
+    return std::nullopt;
+  }
+
+  ColorSpec tint = shell.appIconColor.has_value() ? *shell.appIconColor : colorSpecFromRole(ColorRole::OnSurface);
+  if (capsule.foreground.has_value() && !shell.appIconColor.has_value()) {
+    tint = *capsule.foreground;
+  }
+
+  constexpr float kMinContrastRatio = 3.0f;
+  const Color foreground = resolveColorSpec(tint);
+  const Color background = resolveColorSpec(capsuleBackgroundSpec(capsule));
+  if (contrastRatio(foreground, background) < kMinContrastRatio) {
+    return colorSpecFromRole(ColorRole::OnSurface);
+  }
+  return tint;
 }
 
 AppIconColorizationStyle resolveAppIconColorization(const ColorSpec& tint) noexcept {

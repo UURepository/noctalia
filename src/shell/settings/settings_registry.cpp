@@ -410,7 +410,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "appearance", "interface", tr("settings.schema.appearance.app-icon-colorize.label"),
         tr("settings.schema.appearance.app-icon-colorize.description"), {"shell", "app_icon_colorize"},
-        ToggleSetting{cfg.shell.appIconColorize}, "tint monochrome dock tray app icons"
+        ToggleSetting{cfg.shell.appIconColorize}, "tint monochrome dock tray taskbar bar custom images"
     ));
     {
       const SettingVisibility colorizeOn{{"shell", "app_icon_colorize"}, {"true"}};

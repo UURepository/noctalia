@@ -8,6 +8,7 @@
 #include <optional>
 
 struct ShellConfig;
+struct WidgetBarCapsuleSpec;
 
 struct AppIconColorizationStyle {
   Color tint = rgba(1.0f, 1.0f, 1.0f, 1.0f);
@@ -21,12 +22,13 @@ struct ShellAppIconColorizationSettings {
   bool operator==(const ShellAppIconColorizationSettings&) const = default;
 };
 
-// For Image nodes loaded from a desktop or tray app icon only — not glyphs, overlays, or symbolic icons.
-// Icons are desaturated on the CPU, then tinted via the normal image shader (texel * tint).
-// Bake levels follow ThemeService resolved mode (isResolvedLightTheme()).
+// App-icon bake: desktop/tray/taskbar/dock bitmap icons only (CPU desaturate + tint).
+// Bar launcher/control-center custom_image uses Image::setForegroundTint (alpha-mask recolor in shader).
 
 [[nodiscard]] ShellAppIconColorizationSettings shellAppIconColorizationSettings(const ShellConfig& shell) noexcept;
 [[nodiscard]] std::optional<ColorSpec> effectiveShellAppIconColorizationTint(const ShellConfig& shell) noexcept;
+[[nodiscard]] std::optional<ColorSpec>
+effectiveShellCustomBarImageTint(const ShellConfig& shell, const WidgetBarCapsuleSpec& capsule) noexcept;
 [[nodiscard]] AppIconColorizationStyle resolveAppIconColorization(const ColorSpec& tint) noexcept;
 void bakeAppIconForColorization(std::uint8_t* rgba, int width, int height, const Color& tint) noexcept;
 

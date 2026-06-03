@@ -312,6 +312,7 @@ void RenderContext::renderNode(
               .height = node->height(),
               .tint = tint,
               .monochromeTint = img->monochromeTint(),
+              .alphaMaskTint = img->alphaMaskTint(),
               .opacity = effectiveOpacity,
               .radius = img->radius(),
               .borderColor = img->borderColor(),
