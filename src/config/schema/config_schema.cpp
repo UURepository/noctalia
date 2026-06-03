@@ -1,6 +1,7 @@
 #include "config/schema/config_schema.h"
 
 #include "config/schema/engine.h"
+#include "config/schema/ranges.h"
 #include "core/key_chord.h"
 #include "util/file_utils.h"
 
@@ -15,7 +16,7 @@ namespace noctalia::config::schema {
     static const Schema<AudioConfig> s = {
         field(&AudioConfig::enableOverdrive, "enable_overdrive"),
         field(&AudioConfig::enableSounds, "enable_sounds"),
-        field(&AudioConfig::soundVolume, "sound_volume", Range<float>{0.0f, 1.0f}),
+        field(&AudioConfig::soundVolume, "sound_volume", kUnitRange),
         field(&AudioConfig::volumeChangeSound, "volume_change_sound"),
         field(&AudioConfig::notificationSound, "notification_sound"),
     };
@@ -26,7 +27,7 @@ namespace noctalia::config::schema {
     static const Schema<WeatherConfig> s = {
         field(&WeatherConfig::enabled, "enabled"),
         field(&WeatherConfig::effects, "effects"),
-        field(&WeatherConfig::refreshMinutes, "refresh_minutes"),
+        field(&WeatherConfig::refreshMinutes, "refresh_minutes", kRefreshMinutesRange),
         field(&WeatherConfig::unit, "unit"),
     };
     return s;
@@ -36,8 +37,8 @@ namespace noctalia::config::schema {
     static const Schema<OsdConfig> s = {
         field(&OsdConfig::position, "position"),
         field(&OsdConfig::orientation, "orientation"),
-        field(&OsdConfig::scale, "scale", Range<float>{0.5f, 2.5f}),
-        field(&OsdConfig::backgroundOpacity, "background_opacity", Range<float>{0.0f, 1.0f}),
+        field(&OsdConfig::scale, "scale", kScaleRange),
+        field(&OsdConfig::backgroundOpacity, "background_opacity", kUnitRange),
         field(&OsdConfig::offsetX, "offset_x", Range<std::int64_t>{0, std::nullopt}),
         field(&OsdConfig::offsetY, "offset_y", Range<std::int64_t>{0, std::nullopt}),
         field(&OsdConfig::monitors, "monitors"),
@@ -50,8 +51,8 @@ namespace noctalia::config::schema {
   const Schema<BackdropConfig>& backdropSchema() {
     static const Schema<BackdropConfig> s = {
         field(&BackdropConfig::enabled, "enabled"),
-        field(&BackdropConfig::blurIntensity, "blur_intensity", Range<float>{0.0f, 1.0f}),
-        field(&BackdropConfig::tintIntensity, "tint_intensity", Range<float>{0.0f, 1.0f}),
+        field(&BackdropConfig::blurIntensity, "blur_intensity", kUnitRange),
+        field(&BackdropConfig::tintIntensity, "tint_intensity", kUnitRange),
     };
     return s;
   }
@@ -59,10 +60,10 @@ namespace noctalia::config::schema {
   const Schema<LockscreenConfig>& lockscreenSchema() {
     static const Schema<LockscreenConfig> s = {
         field(&LockscreenConfig::blurredDesktop, "blurred_desktop"),
-        field(&LockscreenConfig::blurIntensity, "blur_intensity", Range<float>{0.0f, 1.0f}),
-        field(&LockscreenConfig::tintIntensity, "tint_intensity", Range<float>{0.0f, 1.0f}),
-        field(&LockscreenConfig::wallpaperBlurIntensity, "wallpaper_blur_intensity", Range<float>{0.0f, 1.0f}),
-        field(&LockscreenConfig::wallpaperTintIntensity, "wallpaper_tint_intensity", Range<float>{0.0f, 1.0f}),
+        field(&LockscreenConfig::blurIntensity, "blur_intensity", kUnitRange),
+        field(&LockscreenConfig::tintIntensity, "tint_intensity", kUnitRange),
+        field(&LockscreenConfig::wallpaperBlurIntensity, "wallpaper_blur_intensity", kUnitRange),
+        field(&LockscreenConfig::wallpaperTintIntensity, "wallpaper_tint_intensity", kUnitRange),
     };
     return s;
   }
@@ -136,8 +137,8 @@ namespace noctalia::config::schema {
         field(&NotificationConfig::showAppName, "show_app_name"),
         field(&NotificationConfig::position, "position"),
         field(&NotificationConfig::layer, "layer"),
-        field(&NotificationConfig::scale, "scale", Range<float>{0.5f, 2.5f}),
-        field(&NotificationConfig::backgroundOpacity, "background_opacity", Range<float>{0.0f, 1.0f}),
+        field(&NotificationConfig::scale, "scale", kScaleRange),
+        field(&NotificationConfig::backgroundOpacity, "background_opacity", kUnitRange),
         field(&NotificationConfig::offsetX, "offset_x"),
         field(&NotificationConfig::offsetY, "offset_y"),
         field(&NotificationConfig::monitors, "monitors"),
@@ -154,16 +155,16 @@ namespace noctalia::config::schema {
         field(&DockConfig::enabled, "enabled"),
         field(&DockConfig::position, "position"),
         field(&DockConfig::activeMonitorOnly, "active_monitor_only"),
-        field(&DockConfig::iconSize, "icon_size", Range<std::int64_t>{16, 256}),
-        field(&DockConfig::padding, "padding", Range<std::int64_t>{0, 100}),
-        field(&DockConfig::itemSpacing, "item_spacing", Range<std::int64_t>{0, 100}),
-        field(&DockConfig::backgroundOpacity, "background_opacity", Range<float>{0.0f, 1.0f}),
+        field(&DockConfig::iconSize, "icon_size", kDockIconSizeRange),
+        field(&DockConfig::padding, "padding", kDockPaddingRange),
+        field(&DockConfig::itemSpacing, "item_spacing", kDockItemSpacingRange),
+        field(&DockConfig::backgroundOpacity, "background_opacity", kUnitRange),
         // `radius` seeds all four corners; per-corner keys below override it.
         custom<DockConfig>(
             "radius",
             [](const toml::table& tbl, DockConfig& d, std::string_view, Diagnostics&) {
               if (auto v = tbl["radius"].value<std::int64_t>()) {
-                const auto r = static_cast<std::int32_t>(std::clamp<std::int64_t>(*v, 0, 500));
+                const auto r = static_cast<std::int32_t>(applyRange<std::int64_t>(*v, kDockRadiusRange));
                 d.radius = r;
                 d.radiusTopLeft = r;
                 d.radiusTopRight = r;
@@ -175,20 +176,20 @@ namespace noctalia::config::schema {
               tbl.insert_or_assign("radius", static_cast<std::int64_t>(d.radius));
             }
         ),
-        field(&DockConfig::radiusTopLeft, "radius_top_left", Range<std::int64_t>{0, 500}),
-        field(&DockConfig::radiusTopRight, "radius_top_right", Range<std::int64_t>{0, 500}),
-        field(&DockConfig::radiusBottomLeft, "radius_bottom_left", Range<std::int64_t>{0, 500}),
-        field(&DockConfig::radiusBottomRight, "radius_bottom_right", Range<std::int64_t>{0, 500}),
-        field(&DockConfig::marginEnds, "margin_ends", Range<std::int64_t>{0, 500}),
-        field(&DockConfig::marginEdge, "margin_edge", Range<std::int64_t>{0, 100}),
+        field(&DockConfig::radiusTopLeft, "radius_top_left", kDockRadiusRange),
+        field(&DockConfig::radiusTopRight, "radius_top_right", kDockRadiusRange),
+        field(&DockConfig::radiusBottomLeft, "radius_bottom_left", kDockRadiusRange),
+        field(&DockConfig::radiusBottomRight, "radius_bottom_right", kDockRadiusRange),
+        field(&DockConfig::marginEnds, "margin_ends", kDockMarginEndsRange),
+        field(&DockConfig::marginEdge, "margin_edge", kDockMarginEdgeRange),
         field(&DockConfig::shadow, "shadow"),
         field(&DockConfig::showRunning, "show_running"),
         field(&DockConfig::autoHide, "auto_hide"),
         field(&DockConfig::reserveSpace, "reserve_space"),
-        field(&DockConfig::activeScale, "active_scale", Range<float>{0.1f, 1.75f}),
-        field(&DockConfig::inactiveScale, "inactive_scale", Range<float>{0.1f, 1.0f}),
-        field(&DockConfig::activeOpacity, "active_opacity", Range<float>{0.0f, 1.0f}),
-        field(&DockConfig::inactiveOpacity, "inactive_opacity", Range<float>{0.0f, 1.0f}),
+        field(&DockConfig::activeScale, "active_scale", kDockActiveScaleRange),
+        field(&DockConfig::inactiveScale, "inactive_scale", kDockInactiveScaleRange),
+        field(&DockConfig::activeOpacity, "active_opacity", kUnitRange),
+        field(&DockConfig::inactiveOpacity, "inactive_opacity", kUnitRange),
         field(&DockConfig::showDots, "show_dots"),
         field(&DockConfig::showInstanceCount, "show_instance_count"),
         // launcher_position accepts none|start|end; anything else warns and is ignored.
@@ -226,7 +227,7 @@ namespace noctalia::config::schema {
 
     const Schema<BatteryDeviceWarningThreshold>& batteryDeviceSchema() {
       static const Schema<BatteryDeviceWarningThreshold> s = {
-          field(&BatteryDeviceWarningThreshold::warningThreshold, "warning_threshold", Range<std::int64_t>{0, 100}),
+          field(&BatteryDeviceWarningThreshold::warningThreshold, "warning_threshold", kBatteryWarningThresholdRange),
       };
       return s;
     }
@@ -248,7 +249,7 @@ namespace noctalia::config::schema {
 
   const Schema<BatteryConfig>& batterySchema() {
     static const Schema<BatteryConfig> s = {
-        field(&BatteryConfig::warningThreshold, "warning_threshold", Range<std::int64_t>{0, 100}),
+        field(&BatteryConfig::warningThreshold, "warning_threshold", kBatteryWarningThresholdRange),
         // selector comes only from the map key; empty selectors are dropped.
         namedMap<BatteryConfig, BatteryDeviceWarningThreshold>(
             &BatteryConfig::deviceThresholds, "device", batteryDeviceSchema(),
@@ -414,7 +415,7 @@ namespace noctalia::config::schema {
     const Schema<WallpaperAutomationConfig>& wallpaperAutomationSchema() {
       static const Schema<WallpaperAutomationConfig> s = {
           field(&WallpaperAutomationConfig::enabled, "enabled"),
-          field(&WallpaperAutomationConfig::intervalMinutes, "interval_minutes", Range<std::int64_t>{0, 1440}),
+          field(&WallpaperAutomationConfig::intervalMinutes, "interval_minutes", kWallpaperAutomationIntervalRange),
           // order accepts case-insensitive random|alphabetical.
           custom<WallpaperAutomationConfig>(
               "order",
@@ -826,7 +827,7 @@ namespace noctalia::config::schema {
     const Schema<ShellConfig::AnimationConfig>& shellAnimationSchema() {
       static const Schema<ShellConfig::AnimationConfig> s = {
           field(&ShellConfig::AnimationConfig::enabled, "enabled"),
-          field(&ShellConfig::AnimationConfig::speed, "speed", Range<float>{0.05f, 4.0f}),
+          field(&ShellConfig::AnimationConfig::speed, "speed", kAnimationSpeedRange),
       };
       return s;
     }
@@ -834,7 +835,7 @@ namespace noctalia::config::schema {
     const Schema<ShellConfig::ShadowConfig>& shellShadowSchema() {
       static const Schema<ShellConfig::ShadowConfig> s = {
           enumField(&ShellConfig::ShadowConfig::direction, "direction", kShadowDirections),
-          field(&ShellConfig::ShadowConfig::alpha, "alpha", Range<float>{0.0f, 1.0f}),
+          field(&ShellConfig::ShadowConfig::alpha, "alpha", kUnitRange),
       };
       return s;
     }
@@ -865,7 +866,7 @@ namespace noctalia::config::schema {
     const Schema<ShellConfig::ScreenCornersConfig>& shellScreenCornersSchema() {
       static const Schema<ShellConfig::ScreenCornersConfig> s = {
           field(&ShellConfig::ScreenCornersConfig::enabled, "enabled"),
-          field(&ShellConfig::ScreenCornersConfig::size, "size", Range<std::int64_t>{1, 100}),
+          field(&ShellConfig::ScreenCornersConfig::size, "size", kScreenCornersSizeRange),
       };
       return s;
     }
@@ -964,8 +965,8 @@ namespace noctalia::config::schema {
 
   const Schema<ShellConfig>& shellSchema() {
     static const Schema<ShellConfig> s = {
-        field(&ShellConfig::uiScale, "ui_scale", Range<float>{0.5f, 4.0f}),
-        field(&ShellConfig::cornerRadiusScale, "corner_radius_scale", Range<float>{0.0f, 2.0f}),
+        field(&ShellConfig::uiScale, "ui_scale", kScaleRange),
+        field(&ShellConfig::cornerRadiusScale, "corner_radius_scale", kCornerRadiusScaleRange),
         // font_family is trimmed; empty falls back to sans-serif.
         custom<ShellConfig>(
             "font_family",
@@ -1023,8 +1024,8 @@ namespace noctalia::config::schema {
             &WallpaperConfig::transitions, "transition", kWallpaperTransitions,
             std::optional<WallpaperTransition>{WallpaperTransition::Fade}
         ),
-        field(&WallpaperConfig::transitionDurationMs, "transition_duration", Range<float>{100.0f, 30000.0f}),
-        field(&WallpaperConfig::edgeSmoothness, "edge_smoothness", Range<float>{0.0f, 1.0f}),
+        field(&WallpaperConfig::transitionDurationMs, "transition_duration", kWallpaperTransitionDurationRange),
+        field(&WallpaperConfig::edgeSmoothness, "edge_smoothness", kUnitRange),
         field(&WallpaperConfig::transitionOnStartup, "transition_on_startup"),
         pathStringField(&WallpaperConfig::directory, "directory"),
         pathStringField(&WallpaperConfig::directoryLight, "directory_light"),
@@ -1090,7 +1091,7 @@ namespace noctalia::config::schema {
   const Schema<CalendarConfig>& calendarSchema() {
     static const Schema<CalendarConfig> s = {
         field(&CalendarConfig::enabled, "enabled"),
-        field(&CalendarConfig::refreshMinutes, "refresh_minutes"),
+        field(&CalendarConfig::refreshMinutes, "refresh_minutes", kRefreshMinutesRange),
         arrayOf<CalendarConfig, CalendarConfig::Account>(
             &CalendarConfig::accounts, "accounts", calendarAccountSchema(),
             [](const CalendarConfig::Account& a) { return !a.id.empty() && !a.type.empty(); }

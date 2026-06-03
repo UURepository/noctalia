@@ -1,5 +1,6 @@
 #include "shell/settings/settings_registry.h"
 
+#include "config/schema/ranges.h"
 #include "core/process.h"
 #include "i18n/i18n.h"
 #include "render/core/color.h"
@@ -24,6 +25,18 @@ namespace settings {
   namespace {
 
     constexpr int kBarMarginMax = 4096;
+
+    // Builds a slider whose bounds come from the shared schema Range — the same
+    // constant the parser clamps with — so the UI range and the config clamp are
+    // one source. `integerValue` (write as int64) stays explicit: it is a UI/write
+    // choice, not implied by the range's numeric type (e.g. transition_duration).
+    template <typename V, typename T>
+    SliderSetting sliderFor(V value, const noctalia::config::schema::Range<T>& range, bool integerValue) {
+      return SliderSetting{
+          static_cast<double>(value), static_cast<double>(range.min.value()), static_cast<double>(range.max.value()),
+          static_cast<double>(range.step.value()), integerValue
+      };
+    }
 
     SelectSetting asSegmented(SelectSetting setting) {
       setting.segmented = true;
@@ -400,12 +413,13 @@ namespace settings {
     entries.push_back(makeEntry(
         "appearance", "interface", tr("settings.schema.appearance.ui-scale.label"),
         tr("settings.schema.appearance.ui-scale.description"), {"shell", "ui_scale"},
-        SliderSetting{cfg.shell.uiScale, 0.5f, 2.5f, 0.05f, false}, "size"
+        sliderFor(cfg.shell.uiScale, noctalia::config::schema::kScaleRange, false), "size"
     ));
     entries.push_back(makeEntry(
         "appearance", "interface", tr("settings.schema.appearance.corner-roundness.label"),
         tr("settings.schema.appearance.corner-roundness.description"), {"shell", "corner_radius_scale"},
-        SliderSetting{cfg.shell.cornerRadiusScale, 0.0f, 2.0f, 0.05f, false}, "rounded corners radius"
+        sliderFor(cfg.shell.cornerRadiusScale, noctalia::config::schema::kCornerRadiusScaleRange, false),
+        "rounded corners radius"
     ));
     entries.push_back(makeEntry(
         "appearance", "interface", tr("settings.schema.appearance.app-icon-colorize.label"),
@@ -457,7 +471,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "appearance", "motion", tr("settings.schema.appearance.animation-speed.label"),
         tr("settings.schema.appearance.animation-speed.description"), {"shell", "animation", "speed"},
-        SliderSetting{cfg.shell.animation.speed, 0.1f, 4.0f, 0.05f, false}, "motion"
+        sliderFor(cfg.shell.animation.speed, noctalia::config::schema::kAnimationSpeedRange, false), "motion"
     ));
     entries.push_back(makeEntry(
         "appearance", "effects", tr("settings.schema.shared.shadow-direction.label"),
@@ -467,7 +481,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "appearance", "effects", tr("settings.schema.shared.shadow-alpha.label"),
         tr("settings.schema.appearance.global-shadow-alpha.description"), {"shell", "shadow", "alpha"},
-        SliderSetting{cfg.shell.shadow.alpha, 0.0f, 1.0f, 0.01f, false}, "shadow opacity", true
+        sliderFor(cfg.shell.shadow.alpha, noctalia::config::schema::kUnitRange, false), "shadow opacity", true
     ));
 
     // Wallpaper
@@ -620,12 +634,16 @@ namespace settings {
     entries.push_back(makeEntry(
         "wallpaper", "transition", tr("settings.schema.wallpaper.transition-duration.label"),
         tr("settings.schema.wallpaper.transition-duration.description"), {"wallpaper", "transition_duration"},
-        SliderSetting{cfg.wallpaper.transitionDurationMs, 100.0f, 30000.0f, 100.0f, true}, "fade animation"
+        sliderFor(
+            cfg.wallpaper.transitionDurationMs, noctalia::config::schema::kWallpaperTransitionDurationRange, true
+        ),
+        "fade animation"
     ));
     entries.push_back(makeEntry(
         "wallpaper", "transition", tr("settings.schema.wallpaper.edge-smoothness.label"),
         tr("settings.schema.wallpaper.edge-smoothness.description"), {"wallpaper", "edge_smoothness"},
-        SliderSetting{cfg.wallpaper.edgeSmoothness, 0.0f, 1.0f, 0.01f, false}, "transition feathering", true
+        sliderFor(cfg.wallpaper.edgeSmoothness, noctalia::config::schema::kUnitRange, false), "transition feathering",
+        true
     ));
     entries.push_back(makeEntry(
         "wallpaper", "transition", tr("settings.schema.wallpaper.transition-on-startup.label"),
@@ -641,7 +659,10 @@ namespace settings {
         "wallpaper", "automation", tr("settings.schema.wallpaper.automation-interval.label"),
         tr("settings.schema.wallpaper.automation-interval.description"),
         {"wallpaper", "automation", "interval_minutes"},
-        SliderSetting{cfg.wallpaper.automation.intervalMinutes, 0.0f, 1440.0f, 1.0f, true}, "rotate slideshow"
+        sliderFor(
+            cfg.wallpaper.automation.intervalMinutes, noctalia::config::schema::kWallpaperAutomationIntervalRange, true
+        ),
+        "rotate slideshow"
     ));
     entries.push_back(makeEntry(
         "wallpaper", "automation", tr("settings.schema.wallpaper.automation-order.label"),
@@ -761,56 +782,56 @@ namespace settings {
     ));
     entries.push_back(makeEntry(
         "dock", "layout", tr("settings.schema.dock.icon-size.label"), tr("settings.schema.dock.icon-size.description"),
-        {"dock", "icon_size"}, SliderSetting{cfg.dock.iconSize, 16.0f, 128.0f, 1.0f, true}, "apps"
+        {"dock", "icon_size"}, sliderFor(cfg.dock.iconSize, noctalia::config::schema::kDockIconSizeRange, true), "apps"
     ));
     entries.push_back(makeEntry(
         "dock", "layout", tr("settings.schema.shared.padding.label"), tr("settings.schema.dock.padding.description"),
-        {"dock", "padding"}, SliderSetting{cfg.dock.padding, 0.0f, 100.0f, 1.0f, true}, "inset"
+        {"dock", "padding"}, sliderFor(cfg.dock.padding, noctalia::config::schema::kDockPaddingRange, true), "inset"
     ));
     entries.push_back(makeEntry(
         "dock", "layout", tr("settings.schema.dock.item-spacing.label"),
         tr("settings.schema.dock.item-spacing.description"), {"dock", "item_spacing"},
-        SliderSetting{cfg.dock.itemSpacing, 0.0f, 100.0f, 1.0f, true}, "gap"
+        sliderFor(cfg.dock.itemSpacing, noctalia::config::schema::kDockItemSpacingRange, true), "gap"
     ));
     entries.push_back(makeEntry(
         "dock", "layout", tr("settings.schema.shared.ends-margin.label"),
         tr("settings.schema.dock.ends-margin.description"), {"dock", "margin_ends"},
-        SliderSetting{cfg.dock.marginEnds, 0.0f, 500.0f, 1.0f, true}, "gap inset"
+        sliderFor(cfg.dock.marginEnds, noctalia::config::schema::kDockMarginEndsRange, true), "gap inset"
     ));
     entries.push_back(makeEntry(
         "dock", "layout", tr("settings.schema.shared.edge-margin.label"),
         tr("settings.schema.dock.edge-margin.description"), {"dock", "margin_edge"},
-        SliderSetting{cfg.dock.marginEdge, 0.0f, 100.0f, 1.0f, true}, "gap inset"
+        sliderFor(cfg.dock.marginEdge, noctalia::config::schema::kDockMarginEdgeRange, true), "gap inset"
     ));
     entries.push_back(makeEntry(
         "dock", "shape", tr("settings.schema.shared.corner-radius.label"),
         tr("settings.schema.dock.corner-radius.description"), {"dock", "radius"},
-        SliderSetting{cfg.dock.radius, 0.0f, 80.0f, 1.0f, true}, "rounded"
+        sliderFor(cfg.dock.radius, noctalia::config::schema::kDockRadiusRange, true), "rounded"
     ));
     entries.push_back(makeEntry(
         "dock", "shape", tr("settings.schema.shared.corner-top-left.label"),
         tr("settings.schema.dock.corner-top-left.description"), {"dock", "radius_top_left"},
-        SliderSetting{cfg.dock.radiusTopLeft, 0.0f, 80.0f, 1.0f, true}, "rounded corner", true
+        sliderFor(cfg.dock.radiusTopLeft, noctalia::config::schema::kDockRadiusRange, true), "rounded corner", true
     ));
     entries.push_back(makeEntry(
         "dock", "shape", tr("settings.schema.shared.corner-top-right.label"),
         tr("settings.schema.dock.corner-top-right.description"), {"dock", "radius_top_right"},
-        SliderSetting{cfg.dock.radiusTopRight, 0.0f, 80.0f, 1.0f, true}, "rounded corner", true
+        sliderFor(cfg.dock.radiusTopRight, noctalia::config::schema::kDockRadiusRange, true), "rounded corner", true
     ));
     entries.push_back(makeEntry(
         "dock", "shape", tr("settings.schema.shared.corner-bottom-left.label"),
         tr("settings.schema.dock.corner-bottom-left.description"), {"dock", "radius_bottom_left"},
-        SliderSetting{cfg.dock.radiusBottomLeft, 0.0f, 80.0f, 1.0f, true}, "rounded corner", true
+        sliderFor(cfg.dock.radiusBottomLeft, noctalia::config::schema::kDockRadiusRange, true), "rounded corner", true
     ));
     entries.push_back(makeEntry(
         "dock", "shape", tr("settings.schema.shared.corner-bottom-right.label"),
         tr("settings.schema.dock.corner-bottom-right.description"), {"dock", "radius_bottom_right"},
-        SliderSetting{cfg.dock.radiusBottomRight, 0.0f, 80.0f, 1.0f, true}, "rounded corner", true
+        sliderFor(cfg.dock.radiusBottomRight, noctalia::config::schema::kDockRadiusRange, true), "rounded corner", true
     ));
     entries.push_back(makeEntry(
         "dock", "effects", tr("settings.schema.shared.background-opacity.label"),
         tr("settings.schema.dock.background-opacity.description"), {"dock", "background_opacity"},
-        SliderSetting{cfg.dock.backgroundOpacity, 0.0f, 1.0f, 0.01f, false}, "alpha"
+        sliderFor(cfg.dock.backgroundOpacity, noctalia::config::schema::kUnitRange, false), "alpha"
     ));
     entries.push_back(makeEntry(
         "dock", "effects", tr("settings.schema.shared.shadow.label"), tr("settings.schema.dock.shadow.description"),
@@ -819,22 +840,22 @@ namespace settings {
     entries.push_back(makeEntry(
         "dock", "focus-styling", tr("settings.schema.dock.active-icon-scale.label"),
         tr("settings.schema.dock.active-icon-scale.description"), {"dock", "active_scale"},
-        SliderSetting{cfg.dock.activeScale, 0.1f, 1.75f, 0.05f, false}, "focused", true
+        sliderFor(cfg.dock.activeScale, noctalia::config::schema::kDockActiveScaleRange, false), "focused", true
     ));
     entries.push_back(makeEntry(
         "dock", "focus-styling", tr("settings.schema.dock.inactive-icon-scale.label"),
         tr("settings.schema.dock.inactive-icon-scale.description"), {"dock", "inactive_scale"},
-        SliderSetting{cfg.dock.inactiveScale, 0.1f, 1.0f, 0.05f, false}, "unfocused", true
+        sliderFor(cfg.dock.inactiveScale, noctalia::config::schema::kDockInactiveScaleRange, false), "unfocused", true
     ));
     entries.push_back(makeEntry(
         "dock", "focus-styling", tr("settings.schema.dock.active-icon-opacity.label"),
         tr("settings.schema.dock.active-icon-opacity.description"), {"dock", "active_opacity"},
-        SliderSetting{cfg.dock.activeOpacity, 0.0f, 1.0f, 0.01f, false}, "focused alpha", true
+        sliderFor(cfg.dock.activeOpacity, noctalia::config::schema::kUnitRange, false), "focused alpha", true
     ));
     entries.push_back(makeEntry(
         "dock", "focus-styling", tr("settings.schema.dock.inactive-icon-opacity.label"),
         tr("settings.schema.dock.inactive-icon-opacity.description"), {"dock", "inactive_opacity"},
-        SliderSetting{cfg.dock.inactiveOpacity, 0.0f, 1.0f, 0.01f, false}, "unfocused alpha", true
+        sliderFor(cfg.dock.inactiveOpacity, noctalia::config::schema::kUnitRange, false), "unfocused alpha", true
     ));
     entries.push_back(makeEntry(
         "dock", "pinned-apps", tr("settings.schema.dock.pinned-apps.label"),
@@ -995,7 +1016,8 @@ namespace settings {
     entries.push_back(makeEntry(
         "desktop", "screen-corners", tr("settings.schema.desktop.screen-corners-size.label"),
         tr("settings.schema.desktop.screen-corners-size.description"), {"shell", "screen_corners", "size"},
-        SliderSetting{cfg.shell.screenCorners.size, 1.0f, 100.0f, 1.0f, true}, "screen corners radius"
+        sliderFor(cfg.shell.screenCorners.size, noctalia::config::schema::kScreenCornersSizeRange, true),
+        "screen corners radius"
     ));
 
     // Shell
@@ -1042,7 +1064,7 @@ namespace settings {
         auto entry = makeEntry(
             "security", "lock-screen", tr("settings.schema.lockscreen.blur-intensity.label"),
             tr("settings.schema.lockscreen.blur-intensity.description"), {"lockscreen", "blur_intensity"},
-            SliderSetting{cfg.lockscreen.blurIntensity, 0.0f, 1.0f, 0.01f, false}, "lock screen blur"
+            sliderFor(cfg.lockscreen.blurIntensity, noctalia::config::schema::kUnitRange, false), "lock screen blur"
         );
         entry.visibleWhen = blurredDesktopOn;
         entries.push_back(std::move(entry));
@@ -1051,7 +1073,7 @@ namespace settings {
         auto entry = makeEntry(
             "security", "lock-screen", tr("settings.schema.lockscreen.tint-intensity.label"),
             tr("settings.schema.lockscreen.tint-intensity.description"), {"lockscreen", "tint_intensity"},
-            SliderSetting{cfg.lockscreen.tintIntensity, 0.0f, 1.0f, 0.01f, false}, "lock screen tint"
+            sliderFor(cfg.lockscreen.tintIntensity, noctalia::config::schema::kUnitRange, false), "lock screen tint"
         );
         entry.visibleWhen = blurredDesktopOn;
         entries.push_back(std::move(entry));
@@ -1061,13 +1083,15 @@ namespace settings {
         "security", "lock-screen", tr("settings.schema.lockscreen.wallpaper-blur-intensity.label"),
         tr("settings.schema.lockscreen.wallpaper-blur-intensity.description"),
         {"lockscreen", "wallpaper_blur_intensity"},
-        SliderSetting{cfg.lockscreen.wallpaperBlurIntensity, 0.0f, 1.0f, 0.01f, false}, "lock screen wallpaper blur"
+        sliderFor(cfg.lockscreen.wallpaperBlurIntensity, noctalia::config::schema::kUnitRange, false),
+        "lock screen wallpaper blur"
     ));
     entries.push_back(makeEntry(
         "security", "lock-screen", tr("settings.schema.lockscreen.wallpaper-tint-intensity.label"),
         tr("settings.schema.lockscreen.wallpaper-tint-intensity.description"),
         {"lockscreen", "wallpaper_tint_intensity"},
-        SliderSetting{cfg.lockscreen.wallpaperTintIntensity, 0.0f, 1.0f, 0.01f, false}, "lock screen wallpaper tint"
+        sliderFor(cfg.lockscreen.wallpaperTintIntensity, noctalia::config::schema::kUnitRange, false),
+        "lock screen wallpaper tint"
     ));
     entries.push_back(makeEntry(
         "shell", "general", tr("settings.schema.shell.time-format.label"),
@@ -1254,7 +1278,7 @@ namespace settings {
     ));
     entries.push_back(makeEntry(
         "popups", "osd", tr("settings.schema.shell.osd-scale.label"), tr("settings.schema.shell.osd-scale.description"),
-        {"osd", "scale"}, SliderSetting{cfg.osd.scale, 0.5f, 2.5f, 0.05f, false},
+        {"osd", "scale"}, sliderFor(cfg.osd.scale, noctalia::config::schema::kScaleRange, false),
         "hud overlay volume brightness size scale multiplier"
     ));
     entries.push_back(makeEntry(
@@ -1272,7 +1296,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "popups", "osd", tr("settings.schema.shell.osd-background-opacity.label"),
         tr("settings.schema.shell.osd-background-opacity.description"), {"osd", "background_opacity"},
-        SliderSetting{cfg.osd.backgroundOpacity, 0.0f, 1.0f, 0.01f, false}, "hud overlay popup opacity"
+        sliderFor(cfg.osd.backgroundOpacity, noctalia::config::schema::kUnitRange, false), "hud overlay popup opacity"
     ));
     entries.push_back(makeEntry(
         "popups", "osd", tr("settings.schema.shell.osd-lock-keys.label"),
@@ -1343,12 +1367,12 @@ namespace settings {
         entries.push_back(makeEntry(
             "niri", "backdrop", tr("settings.schema.backdrop.blur-intensity.label"),
             tr("settings.schema.backdrop.blur-intensity.description"), {"backdrop", "blur_intensity"},
-            SliderSetting{cfg.backdrop.blurIntensity, 0.0f, 1.0f, 0.01f, false}, "wallpaper"
+            sliderFor(cfg.backdrop.blurIntensity, noctalia::config::schema::kUnitRange, false), "wallpaper"
         ));
         entries.push_back(makeEntry(
             "niri", "backdrop", tr("settings.schema.backdrop.tint-intensity.label"),
             tr("settings.schema.backdrop.tint-intensity.description"), {"backdrop", "tint_intensity"},
-            SliderSetting{cfg.backdrop.tintIntensity, 0.0f, 1.0f, 0.01f, false}, "wallpaper"
+            sliderFor(cfg.backdrop.tintIntensity, noctalia::config::schema::kUnitRange, false), "wallpaper"
         ));
       }
     }
@@ -1412,7 +1436,7 @@ namespace settings {
         entries.push_back(makeEntry(
             "system", "battery", tr("settings.schema.system.battery-warning-threshold.label"),
             tr("settings.schema.system.battery-warning-threshold.description"), {"battery", "warning_threshold"},
-            SliderSetting{cfg.battery.warningThreshold, 0.0f, 100.0f, 1.0f, true},
+            sliderFor(cfg.battery.warningThreshold, noctalia::config::schema::kBatteryWarningThresholdRange, true),
             "battery low warning threshold notification"
         ));
       }
@@ -1532,7 +1556,7 @@ namespace settings {
       auto e = makeEntry(
           "location", "weather", tr("settings.schema.services.weather-refresh-interval.label"),
           tr("settings.schema.services.weather-refresh-interval.description"), {"weather", "refresh_minutes"},
-          SliderSetting{cfg.weather.refreshMinutes, 5.0f, 240.0f, 5.0f, true}, "forecast"
+          sliderFor(cfg.weather.refreshMinutes, noctalia::config::schema::kRefreshMinutesRange, true), "forecast"
       );
       e.visibleWhen = weatherOn;
       entries.push_back(std::move(e));
@@ -1645,7 +1669,7 @@ namespace settings {
       auto e = makeEntry(
           "services", "calendar", tr("settings.schema.services.calendar-refresh-interval.label"),
           tr("settings.schema.services.calendar-refresh-interval.description"), {"calendar", "refresh_minutes"},
-          SliderSetting{cfg.calendar.refreshMinutes, 5.0f, 240.0f, 5.0f, true}, "calendar sync"
+          sliderFor(cfg.calendar.refreshMinutes, noctalia::config::schema::kRefreshMinutesRange, true), "calendar sync"
       );
       e.visibleWhen = calendarOn;
       entries.push_back(std::move(e));
@@ -1664,7 +1688,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "services", "audio", tr("settings.schema.services.sound-volume.label"),
         tr("settings.schema.services.sound-volume.description"), {"audio", "sound_volume"},
-        SliderSetting{cfg.audio.soundVolume, 0.0f, 1.0f, 0.01f, false}, "sound"
+        sliderFor(cfg.audio.soundVolume, noctalia::config::schema::kUnitRange, false), "sound"
     ));
     entries.push_back(makeEntry(
         "services", "audio", tr("settings.schema.services.volume-change-sound.label"),
@@ -1835,7 +1859,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "notifications", "toasts", tr("settings.schema.notifications.scale.label"),
         tr("settings.schema.notifications.scale.description"), {"notification", "scale"},
-        SliderSetting{cfg.notification.scale, 0.5f, 2.5f, 0.05f, false}, "toast size scale"
+        sliderFor(cfg.notification.scale, noctalia::config::schema::kScaleRange, false), "toast size scale"
     ));
     entries.push_back(makeEntry(
         "notifications", "toasts", tr("settings.schema.notifications.offset-x.label"),
@@ -1856,7 +1880,7 @@ namespace settings {
     entries.push_back(makeEntry(
         "notifications", "toasts", tr("settings.schema.notifications.toast-opacity.label"),
         tr("settings.schema.notifications.toast-opacity.description"), {"notification", "background_opacity"},
-        SliderSetting{cfg.notification.backgroundOpacity, 0.0f, 1.0f, 0.01f, false}, "popup"
+        sliderFor(cfg.notification.backgroundOpacity, noctalia::config::schema::kUnitRange, false), "popup"
     ));
     entries.push_back(makeEntry(
         "notifications", "general", tr("settings.schema.notifications.collapse-on-dismiss.label"),
