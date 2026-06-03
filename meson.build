@@ -363,6 +363,7 @@ _noctalia_sources = files(
   'src/config/config_service.cpp',
   'src/config/config_types.cpp',
   'src/config/config_validate.cpp',
+  'src/config/widget_config.cpp',
   'src/config/schema/config_schema.cpp',
   'src/config/state_store.cpp',
   'src/config/cli.cpp',
@@ -927,6 +928,25 @@ config_schema_roundtrip_test = executable('config_schema_roundtrip_test',
 )
 
 test('config_schema_roundtrip', config_schema_roundtrip_test)
+
+config_widget_test = executable('config_widget_test',
+  sources: files(
+    'tests/config_widget_test.cpp',
+    'src/config/widget_config.cpp',
+    'src/config/config_types.cpp',
+    'src/render/core/color.cpp',
+    'src/ui/palette.cpp',
+    'src/theme/builtin_palettes.cpp',
+    'src/theme/fixed_palette.cpp',
+    'src/theme/color.cpp',
+    'src/theme/contrast.cpp',
+    'src/core/key_chord.cpp',
+  ),
+  include_directories: _noctalia_inc,
+  dependencies: [xkbcommon_dep],
+)
+
+test('config_widget', config_widget_test)
 
 config_path_resolution_test = executable('config_path_resolution_test',
   sources: files(

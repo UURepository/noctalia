@@ -4,6 +4,7 @@
 #include "config/config_types.h"
 #include "config/schema/config_schema.h"
 #include "config/schema/engine.h"
+#include "config/widget_config.h"
 #include "core/toml.h"
 #include "shell/desktop/desktop_widget_settings_registry.h"
 #include "shell/settings/widget_settings_registry.h"
@@ -14,6 +15,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace noctalia::config {
@@ -214,27 +216,27 @@ namespace noctalia::config {
       if (widgets == nullptr) {
         return;
       }
+      Config resolvedConfig;
+      seedBuiltinWidgets(resolvedConfig);
       for (const auto& [name, node] : *widgets) {
         const auto* tbl = node.as_table();
         if (tbl == nullptr) {
           continue;
         }
         const std::string nameStr(name.str());
-        const std::string type = (*tbl)["type"].value<std::string>().value_or(nameStr);
         const std::string base = "widget." + nameStr;
+        WidgetConfig wc = readBarWidgetConfig(nameStr, *tbl, resolvedConfig);
+        const std::string type = wc.type;
         if (!settings::isBuiltInWidgetType(type)) {
           diag.warn(base, "unrecognized widget type \"" + type + "\"");
+          resolvedConfig.widgets[nameStr] = std::move(wc);
           continue;
-        }
-        WidgetConfig wc;
-        wc.type = type;
-        if (auto script = (*tbl)["script"].value<std::string>()) {
-          wc.settings["script"] = *script;
         }
         const auto fields = settings::widgetSettingSchema(type, &wc);
         // Scripted widgets resolve settings from a Lua manifest that may be absent
         // here, so don't flag unknown keys for them.
         validateSettingsMap(*tbl, fields, base, /*flagUnknown=*/type != "scripted", diag, /*ignoreKeys=*/{"type"});
+        resolvedConfig.widgets[nameStr] = std::move(wc);
       }
     }
 

@@ -1,5 +1,6 @@
 #include "config/atomic_file.h"
 #include "config/config_service.h"
+#include "config/widget_config.h"
 #include "core/key_chord.h"
 #include "core/log.h"
 #include "shell/settings/widget_settings_registry.h"
@@ -777,7 +778,7 @@ std::size_t ConfigService::overridePreserveDepthForPath(const std::vector<std::s
 
 std::optional<Config> ConfigService::configForOverrides(const toml::table& overrides) const {
   Config parsed;
-  seedBuiltinWidgets(parsed);
+  noctalia::config::seedBuiltinWidgets(parsed);
 
   const auto files = sortedConfigTomlFiles(m_configDir);
   toml::table merged;

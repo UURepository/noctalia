@@ -123,7 +123,6 @@ public:
   static void deepMerge(toml::table& base, const toml::table& overlay);
 
 private:
-  static void seedBuiltinWidgets(Config& config);
   void loadAll();
   void parseConfigTable(const toml::table& tbl, Config& config, bool logSummary) const;
   [[nodiscard]] std::optional<Config> configForOverrides(const toml::table& overrides) const;

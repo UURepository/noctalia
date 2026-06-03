@@ -4,6 +4,7 @@
 #include "config/config_export.h"
 #include "config/schema/config_schema.h"
 #include "config/schema/engine.h"
+#include "config/widget_config.h"
 #include "core/build_info.h"
 #include "core/deferred_call.h"
 #include "core/log.h"
@@ -62,31 +63,6 @@ namespace {
       }
     }
     return result;
-  }
-
-  std::optional<WidgetSettingValue> readWidgetSetting(const toml::node& node) {
-    if (const auto* stringValue = node.as_string()) {
-      return WidgetSettingValue{stringValue->get()};
-    }
-    if (const auto* intValue = node.as_integer()) {
-      return WidgetSettingValue{intValue->get()};
-    }
-    if (const auto* floatValue = node.as_floating_point()) {
-      return WidgetSettingValue{floatValue->get()};
-    }
-    if (const auto* boolValue = node.as_boolean()) {
-      return WidgetSettingValue{boolValue->get()};
-    }
-    if (const auto* arrayValue = node.as_array()) {
-      std::vector<std::string> strings;
-      for (const auto& item : *arrayValue) {
-        if (auto value = item.value<std::string>()) {
-          strings.push_back(*value);
-        }
-      }
-      return WidgetSettingValue{std::move(strings)};
-    }
-    return std::nullopt;
   }
 
   // Returns true if `key` is a color-typed setting for `widget`, per the widget
@@ -191,7 +167,7 @@ namespace {
     }
     if (const auto* settingsTable = widgetTable["settings"].as_table()) {
       for (const auto& [key, value] : *settingsTable) {
-        if (auto parsed = readWidgetSetting(value); parsed.has_value()) {
+        if (auto parsed = noctalia::config::readWidgetSettingValue(value); parsed.has_value()) {
           widget.settings.emplace(std::string(key.str()), std::move(*parsed));
         }
       }
@@ -922,92 +898,12 @@ void ConfigService::deepMerge(toml::table& base, const toml::table& overlay) {
   }
 }
 
-void ConfigService::seedBuiltinWidgets(Config& config) {
-  // Built-in named widget instances — act as defaults that [widget.*] entries override.
-  auto seed = [&](const char* name, WidgetConfig wc) { config.widgets.emplace(name, std::move(wc)); };
-
-  WidgetConfig cpu;
-  cpu.type = "sysmon";
-  cpu.settings["stat"] = std::string("cpu_usage");
-  seed("cpu", std::move(cpu));
-
-  WidgetConfig temp;
-  temp.type = "sysmon";
-  temp.settings["stat"] = std::string("cpu_temp");
-  seed("temp", std::move(temp));
-
-  WidgetConfig ram;
-  ram.type = "sysmon";
-  ram.settings["stat"] = std::string("ram_used");
-  seed("ram", std::move(ram));
-
-  WidgetConfig netTx;
-  netTx.type = "sysmon";
-  netTx.settings["stat"] = std::string("net_tx");
-  seed("network_tx", std::move(netTx));
-
-  WidgetConfig netRx;
-  netRx.type = "sysmon";
-  netRx.settings["stat"] = std::string("net_rx");
-  seed("network_rx", std::move(netRx));
-
-  WidgetConfig outputVolume;
-  outputVolume.type = "volume";
-  outputVolume.settings["device"] = std::string("output");
-  seed("output_volume", std::move(outputVolume));
-
-  WidgetConfig inputVolume;
-  inputVolume.type = "volume";
-  inputVolume.settings["device"] = std::string("input");
-  seed("input_volume", std::move(inputVolume));
-
-  WidgetConfig date;
-  date.type = "clock";
-  date.settings["format"] = std::string("{:%a %d %b}");
-  seed("date", std::move(date));
-
-  WidgetConfig activeWindow;
-  activeWindow.type = "active_window";
-  activeWindow.settings["max_length"] = 260.0;
-  activeWindow.settings["min_length"] = 80.0;
-  activeWindow.settings["icon_size"] = static_cast<double>(Style::fontSizeBody);
-  activeWindow.settings["title_scroll"] = std::string("none");
-  seed("active_window", std::move(activeWindow));
-
-  WidgetConfig media;
-  media.type = "media";
-  media.settings["max_length"] = 220.0;
-  media.settings["min_length"] = 80.0;
-  media.settings["art_size"] = 16.0;
-  media.settings["title_scroll"] = std::string("none");
-  seed("media", std::move(media));
-
-  WidgetConfig keyboardLayout;
-  keyboardLayout.type = "keyboard_layout";
-  keyboardLayout.settings["cycle_command"] = std::string("");
-  keyboardLayout.settings["hide_when_single_layout"] = false;
-  seed("keyboard_layout", std::move(keyboardLayout));
-
-  WidgetConfig lockKeys;
-  lockKeys.type = "lock_keys";
-  lockKeys.settings["show_caps_lock"] = true;
-  lockKeys.settings["show_num_lock"] = true;
-  lockKeys.settings["show_scroll_lock"] = false;
-  lockKeys.settings["hide_when_off"] = false;
-  lockKeys.settings["display"] = std::string("short");
-  seed("lock_keys", std::move(lockKeys));
-
-  WidgetConfig spacer;
-  spacer.type = "spacer";
-  seed("spacer", std::move(spacer));
-}
-
 void ConfigService::loadAll() {
   noctalia::profiling::ScopedTimer parseTimer(kLog, "reload: parse (loadAll)");
   m_effectiveOverrideCache.clear();
   auto makeDefaultConfig = [] {
     Config config;
-    ConfigService::seedBuiltinWidgets(config);
+    noctalia::config::seedBuiltinWidgets(config);
     config.idle.behaviors = defaultIdleBehaviors();
     config.bars.push_back(BarConfig{});
     config.controlCenter.shortcuts = defaultControlCenterShortcuts();
@@ -1016,7 +912,7 @@ void ConfigService::loadAll() {
   };
 
   Config nextConfig;
-  seedBuiltinWidgets(nextConfig);
+  noctalia::config::seedBuiltinWidgets(nextConfig);
 
   const auto files = sortedConfigTomlFiles(m_configDir);
 
@@ -1192,43 +1088,8 @@ void ConfigService::parseConfigTable(const toml::table& tbl, Config& config, boo
         continue;
       }
 
-      std::string widgetName(name.str());
-      WidgetConfig wc;
-
-      if (auto v = (*entryTbl)["type"].value<std::string>()) {
-        wc.type = *v;
-        if (auto it = config.widgets.find(widgetName); it != config.widgets.end() && it->second.type == wc.type) {
-          wc.settings = it->second.settings;
-        }
-      } else if (auto it = config.widgets.find(widgetName); it != config.widgets.end()) {
-        wc = it->second;
-      } else {
-        wc.type = widgetName;
-      }
-
-      for (const auto& [key, val] : *entryTbl) {
-        if (key == "type") {
-          continue;
-        }
-        if (auto* s = val.as_string()) {
-          wc.settings[std::string(key.str())] = s->get();
-        } else if (auto* i = val.as_integer()) {
-          wc.settings[std::string(key.str())] = i->get();
-        } else if (auto* f = val.as_floating_point()) {
-          wc.settings[std::string(key.str())] = f->get();
-        } else if (auto* b = val.as_boolean()) {
-          wc.settings[std::string(key.str())] = b->get();
-        } else if (auto* arr = val.as_array()) {
-          std::vector<std::string> list;
-          list.reserve(arr->size());
-          for (const auto& item : *arr) {
-            if (auto v = item.value<std::string>()) {
-              list.push_back(*v);
-            }
-          }
-          wc.settings[std::string(key.str())] = std::move(list);
-        }
-      }
+      const std::string widgetName(name.str());
+      WidgetConfig wc = noctalia::config::readBarWidgetConfig(widgetName, *entryTbl, config);
 
       validateWidgetSettings(widgetName, wc);
       config.widgets[widgetName] = std::move(wc);
