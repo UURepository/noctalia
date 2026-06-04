@@ -2,7 +2,6 @@
 
 #include "shell/bar/widget.h"
 
-#include <filesystem>
 #include <string>
 #include <unordered_set>
 
@@ -38,7 +37,6 @@ private:
   void syncState(Renderer& renderer);
   void syncWidgetVisibility(bool hasMedia);
   [[nodiscard]] static std::string buildDisplayText(const MprisPlayerInfo& player);
-  [[nodiscard]] std::string resolveArtworkPath() const;
 
   MprisService* m_mpris = nullptr;
   HttpClient* m_httpClient = nullptr;

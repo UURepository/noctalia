@@ -1120,24 +1120,11 @@ void HomeTab::sync(Renderer& renderer) {
           const std::string artUrl = mpris::effectiveArtUrl(*active);
           const bool artRetry = !artUrl.empty() && !m_mediaArt->hasImage();
           if (artUrl != m_loadedMediaArtUrl || artRetry) {
-            std::string artPath = mpris::normalizeArtPath(artUrl);
-            if (artPath.empty() && mpris::isRemoteArtUrl(artUrl)) {
-              const auto cached = mpris::artCachePath(artUrl);
-              std::error_code ec;
-              if (std::filesystem::exists(cached, ec) && std::filesystem::file_size(cached, ec) > 0) {
-                artPath = cached.string();
-              } else if (m_httpClient != nullptr && m_pendingArtDownloads.find(artUrl) == m_pendingArtDownloads.end()) {
-                std::filesystem::create_directories(cached.parent_path(), ec);
-                m_pendingArtDownloads.insert(artUrl);
-                m_httpClient->download(artUrl, cached, [this, url = artUrl](bool success) {
-                  m_pendingArtDownloads.erase(url);
-                  if (success) {
-                    m_loadedMediaArtUrl.clear();
-                    PanelManager::instance().refresh();
-                  }
+            const std::string artPath =
+                mpris::resolveArtworkSource(m_httpClient, m_pendingArtDownloads, artUrl, [this] {
+                  m_loadedMediaArtUrl.clear();
+                  PanelManager::instance().refresh();
                 });
-              }
-            }
             bool loaded = false;
             if (!artPath.empty()) {
               const int decodeSize = static_cast<int>(std::round(Style::controlHeightLg * 2.6f * contentScale()));

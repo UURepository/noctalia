@@ -173,6 +173,32 @@ void HttpClient::download(std::string_view url, const std::filesystem::path& des
   performMulti("download start");
 }
 
+void HttpClient::download(std::vector<std::string> urls, const std::filesystem::path& destPath, CompletionCallback cb) {
+  if (urls.empty()) {
+    deferFailure(std::move(cb));
+    return;
+  }
+  auto state = std::make_shared<SequentialDownload>();
+  state->urls = std::move(urls);
+  state->destPath = destPath;
+  state->callback = std::move(cb);
+  downloadSequential(std::move(state));
+}
+
+void HttpClient::downloadSequential(std::shared_ptr<SequentialDownload> state) {
+  const std::size_t index = state->index;
+  // The captured shared state keeps urls/dest/callback alive across async hops;
+  // advance to the next candidate only when the current one fails.
+  download(state->urls[index], state->destPath, [this, state](bool success) {
+    if (success || state->index + 1 >= state->urls.size()) {
+      state->callback(success);
+      return;
+    }
+    state->index += 1;
+    downloadSequential(state);
+  });
+}
+
 void HttpClient::post(std::string_view url, std::string body, std::string_view contentType, CompletionCallback cb) {
   if (m_offlineMode) {
     kLog.warn("post skipped in offline mode url={}", urlForLog(url));

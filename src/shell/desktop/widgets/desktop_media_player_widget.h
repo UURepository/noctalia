@@ -31,7 +31,6 @@ private:
   void layoutVertical(Renderer& renderer, float scale);
   void layoutButtons(Renderer& renderer, float scale);
   void sync(Renderer& renderer);
-  [[nodiscard]] std::string resolveArtworkPath() const;
   void applyShadow();
 
   MprisService* m_mpris;

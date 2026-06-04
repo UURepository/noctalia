@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <poll.h>
 #include <string>
 #include <string_view>
@@ -43,6 +44,11 @@ public:
   // local error means the request is never issued. Callers can rely on this
   // to avoid reentrant state mutation.
   void download(std::string_view url, const std::filesystem::path& destPath, CompletionCallback cb);
+
+  // Try each url in order, stopping at the first that downloads successfully to destPath.
+  // cb(true) once one succeeds; cb(false) if all fail. Same deferred-callback semantics as
+  // the single-url overload.
+  void download(std::vector<std::string> urls, const std::filesystem::path& destPath, CompletionCallback cb);
 
   // Fire-and-forget async POST. Same callback semantics as download().
   void post(std::string_view url, std::string body, std::string_view contentType, CompletionCallback cb);
@@ -88,6 +94,14 @@ private:
     std::array<char, CURL_ERROR_SIZE> errorBuffer{};
   };
 
+  struct SequentialDownload {
+    std::vector<std::string> urls;
+    std::filesystem::path destPath;
+    CompletionCallback callback;
+    std::size_t index = 0;
+  };
+
+  void downloadSequential(std::shared_ptr<SequentialDownload> state);
   void finishTransfer(CURL* easy, CURLcode result);
   void finishPostTransfer(CURL* easy, CURLcode result);
   void finishRequestTransfer(CURL* easy, CURLcode result);

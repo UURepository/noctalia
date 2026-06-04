@@ -11,7 +11,6 @@
 #include "ui/style.h"
 
 #include <cmath>
-#include <filesystem>
 
 using namespace mpris;
 
@@ -290,53 +289,27 @@ void DesktopMediaPlayerWidget::sync(Renderer& renderer) {
 
   m_playPause->setGlyph(m_lastPlaybackStatus == "Playing" ? "media-pause" : "media-play");
 
-  if (artChanged && m_artwork != nullptr) {
-    std::string artPath = resolveArtworkPath();
-    if (artPath.empty() && isRemoteArtUrl(m_lastArtUrl)) {
-      const auto cached = artCachePath(m_lastArtUrl);
-      std::error_code ec;
-      if (std::filesystem::exists(cached, ec) && std::filesystem::file_size(cached, ec) > 0) {
-        artPath = cached.string();
-      } else if (m_httpClient != nullptr && !m_pendingArtDownloads.contains(m_lastArtUrl)) {
-        std::filesystem::create_directories(cached.parent_path(), ec);
-        m_pendingArtDownloads.insert(m_lastArtUrl);
-        m_httpClient->download(m_lastArtUrl, cached, [this, url = m_lastArtUrl](bool success) {
-          m_pendingArtDownloads.erase(url);
-          if (success) {
-            requestUpdate();
-          }
-        });
-      }
-    }
-
-    if (!artPath.empty()) {
-      const int targetPx = static_cast<int>(std::round(kArtSize * contentScale()));
-      const bool squareCrop = active.has_value() && shouldCenterSquareCropArt(*active, m_lastArtUrl);
-      if (!m_artwork->setSourceFile(renderer, artPath, targetPx, true, squareCrop))
+  if (m_artwork != nullptr) {
+    const int targetPx = static_cast<int>(std::round(kArtSize * contentScale()));
+    const bool squareCrop = active.has_value() && shouldCenterSquareCropArt(*active, m_lastArtUrl);
+    if (artChanged) {
+      const std::string artPath =
+          resolveArtworkSource(m_httpClient, m_pendingArtDownloads, m_lastArtUrl, [this] { requestUpdate(); });
+      if (!artPath.empty()) {
+        if (!m_artwork->setSourceFile(renderer, artPath, targetPx, true, squareCrop))
+          m_artwork->clear(renderer);
+      } else {
         m_artwork->clear(renderer);
-    } else {
-      m_artwork->clear(renderer);
-    }
-  } else if (!m_lastArtUrl.empty() && m_artwork != nullptr && !m_artwork->hasImage()) {
-    std::string artPath = resolveArtworkPath();
-    if (artPath.empty() && isRemoteArtUrl(m_lastArtUrl)) {
-      const auto cached = artCachePath(m_lastArtUrl);
-      std::error_code ec;
-      if (std::filesystem::exists(cached, ec) && std::filesystem::file_size(cached, ec) > 0)
-        artPath = cached.string();
-    }
-    if (!artPath.empty()) {
-      const int targetPx = static_cast<int>(std::round(kArtSize * contentScale()));
-      const bool squareCrop = active.has_value() && shouldCenterSquareCropArt(*active, m_lastArtUrl);
-      if (m_artwork->setSourceFile(renderer, artPath, targetPx, true, squareCrop))
+      }
+    } else if (!m_lastArtUrl.empty() && !m_artwork->hasImage()) {
+      const std::string artPath = cachedArtworkPath(m_lastArtUrl);
+      if (!artPath.empty() && m_artwork->setSourceFile(renderer, artPath, targetPx, true, squareCrop))
         requestRedraw();
     }
   }
 
   requestRedraw();
 }
-
-std::string DesktopMediaPlayerWidget::resolveArtworkPath() const { return normalizeArtPath(m_lastArtUrl); }
 
 void DesktopMediaPlayerWidget::applyShadow() {
   if (m_title == nullptr || m_artist == nullptr) {

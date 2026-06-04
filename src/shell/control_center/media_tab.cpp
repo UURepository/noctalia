@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <filesystem>
 #include <format>
 #include <memory>
 #include <string>
@@ -880,24 +879,10 @@ void MediaTab::refresh(Renderer& renderer) {
     }
 
     const std::string resolvedArtUrl = effectiveArtUrl(player);
-    std::string artPath = normalizeArtPath(resolvedArtUrl);
-    if (artPath.empty() && isRemoteArtUrl(resolvedArtUrl)) {
-      const auto cached = artCachePath(resolvedArtUrl);
-      std::error_code ec;
-      if (std::filesystem::exists(cached, ec) && std::filesystem::file_size(cached, ec) > 0) {
-        artPath = cached.string();
-      } else if (m_httpClient != nullptr && m_pendingArtDownloads.find(resolvedArtUrl) == m_pendingArtDownloads.end()) {
-        std::filesystem::create_directories(cached.parent_path(), ec);
-        m_pendingArtDownloads.insert(resolvedArtUrl);
-        m_httpClient->download(resolvedArtUrl, cached, [this, url = resolvedArtUrl](bool success) {
-          m_pendingArtDownloads.erase(url);
-          if (success) {
-            m_lastArtPath.clear();
-            PanelManager::instance().refresh();
-          }
-        });
-      }
-    }
+    const std::string artPath = resolveArtworkSource(m_httpClient, m_pendingArtDownloads, resolvedArtUrl, [this] {
+      m_lastArtPath.clear();
+      PanelManager::instance().refresh();
+    });
 
     if (m_artwork != nullptr
         && (!resolvedArtUrl.empty()

@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <linux/input-event-codes.h>
 
 using namespace mpris;
@@ -236,30 +235,13 @@ void MediaWidget::syncState(Renderer& renderer) {
   applyTitleScrollMode(m_label->visible());
   m_label->measure(renderer);
 
+  const int artDecodePx = static_cast<int>(std::round(64.0f * m_contentScale));
   if (artChanged) {
-    std::string artPath = resolveArtworkPath();
-    if (artPath.empty() && isRemoteArtUrl(m_lastArtUrl)) {
-      const auto cached = artCachePath(m_lastArtUrl);
-      std::error_code ec;
-      if (std::filesystem::exists(cached, ec) && std::filesystem::file_size(cached, ec) > 0) {
-        artPath = cached.string();
-      } else if (m_httpClient != nullptr && m_pendingArtDownloads.find(m_lastArtUrl) == m_pendingArtDownloads.end()) {
-        std::filesystem::create_directories(cached.parent_path(), ec);
-        m_pendingArtDownloads.insert(m_lastArtUrl);
-        m_httpClient->download(m_lastArtUrl, cached, [this, url = m_lastArtUrl](bool success) {
-          m_pendingArtDownloads.erase(url);
-          if (success) {
-            requestUpdate();
-          }
-        });
-      }
-    }
-
+    const std::string artPath =
+        resolveArtworkSource(m_httpClient, m_pendingArtDownloads, m_lastArtUrl, [this] { requestUpdate(); });
     if (!artPath.empty()) {
       const bool squareCrop = active.has_value() && shouldCenterSquareCropArt(*active, m_lastArtUrl);
-      if (!m_art->setSourceFile(
-              renderer, artPath, static_cast<int>(std::round(64.0f * m_contentScale)), true, squareCrop
-          )) {
+      if (!m_art->setSourceFile(renderer, artPath, artDecodePx, true, squareCrop)) {
         kLog.warn("artwork load failed url=\"{}\" path=\"{}\"", m_lastArtUrl, artPath);
         m_art->clear(renderer);
       } else {
@@ -272,19 +254,10 @@ void MediaWidget::syncState(Renderer& renderer) {
       m_art->clear(renderer);
     }
   } else if (!m_lastArtUrl.empty() && !m_art->hasImage()) {
-    std::string artPath = resolveArtworkPath();
-    if (artPath.empty() && isRemoteArtUrl(m_lastArtUrl)) {
-      const auto cached = artCachePath(m_lastArtUrl);
-      std::error_code ec;
-      if (std::filesystem::exists(cached, ec) && std::filesystem::file_size(cached, ec) > 0) {
-        artPath = cached.string();
-      }
-    }
+    const std::string artPath = cachedArtworkPath(m_lastArtUrl);
     if (!artPath.empty()) {
       const bool squareCrop = active.has_value() && shouldCenterSquareCropArt(*active, m_lastArtUrl);
-      if (m_art->setSourceFile(
-              renderer, artPath, static_cast<int>(std::round(64.0f * m_contentScale)), false, squareCrop
-          )) {
+      if (m_art->setSourceFile(renderer, artPath, artDecodePx, false, squareCrop)) {
         requestRedraw();
       }
     }
@@ -315,5 +288,3 @@ std::string MediaWidget::buildDisplayText(const MprisPlayerInfo& player) {
   }
   return i18n::tr("bar.widgets.media.nothing-playing");
 }
-
-std::string MediaWidget::resolveArtworkPath() const { return normalizeArtPath(m_lastArtUrl); }
