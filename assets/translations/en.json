@@ -79,18 +79,52 @@
       "unpin-from-dock": "Unpin from dock"
     },
     "providers": {
+      "applications": {
+        "title": "Applications"
+      },
+      "calculator": {
+        "title": "Calculator"
+      },
+      "wallpaper": {
+        "title": "Wallpaper"
+      },
       "session": {
-        "category": "Session",
+        "title": "Session",
         "action-subtitle": "Run session action",
         "command-subtitle": "Run configured command"
       },
+      "emoji": {
+        "title": "Emoji"
+      },
       "window": {
-        "category": "Windows"
+        "title": "Windows"
       }
     },
     "categories": {
       "all": "All",
-      "recently-used": "Recently Used"
+      "recently-used": "Recently Used",
+      "applications": {
+        "internet": "Internet",
+        "multimedia": "Multimedia",
+        "development": "Development",
+        "games": "Games",
+        "graphics": "Graphics",
+        "office": "Office",
+        "education": "Education",
+        "system": "System",
+        "utilities": "Utilities"
+      },
+      "emoji": {
+        "people": "People",
+        "animals": "Animals",
+        "food": "Food",
+        "travel": "Travel",
+        "activity": "Activity",
+        "objects": "Objects",
+        "symbols": "Symbols",
+        "flags": "Flags",
+        "nature": "Nature"
+      }
     },
     "empty": {
       "type-to-search": "Type to search...",

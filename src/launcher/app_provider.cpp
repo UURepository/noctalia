@@ -2,11 +2,14 @@
 
 #include "compositors/compositor_platform.h"
 #include "config/config_service.h"
+#include "i18n/i18n.h"
 #include "system/desktop_entry_launch.h"
 #include "util/fuzzy_match.h"
 #include "util/string_utils.h"
 
 #include <algorithm>
+#include <array>
+#include <string>
 #include <string_view>
 
 namespace {
@@ -49,37 +52,61 @@ namespace {
     return std::max({nameScore, genericScore, keywordScore, catScore, idScore, execScore});
   }
 
+  struct AppCategoryDef {
+    std::string_view id;
+    std::string_view glyph;
+  };
+
+  // Stable category ids (used for matching) paired with their chip glyph. Display
+  // labels are resolved from i18n via appCategoryLabel(), keyed on the id.
+  constexpr std::array<AppCategoryDef, 9> kAppCategories = {{
+      {"internet", "world"},
+      {"multimedia", "player-play"},
+      {"development", "code"},
+      {"games", "device-gamepad-2"},
+      {"graphics", "photo"},
+      {"office", "briefcase"},
+      {"education", "school"},
+      {"system", "settings"},
+      {"utilities", "tool"},
+  }};
+
+  std::string appCategoryLabel(std::string_view id) {
+    return i18n::tr("launcher.categories.applications." + std::string(id));
+  }
+
+  // Maps a desktop-entry category list to one of kAppCategories' stable ids.
   std::string_view primaryCategory(std::string_view categories) {
     std::size_t start = 0;
     while (start < categories.size()) {
       auto semi = categories.find(';', start);
       auto token = (semi == std::string_view::npos) ? categories.substr(start) : categories.substr(start, semi - start);
       if (token == "AudioVideo" || token == "Audio" || token == "Video") {
-        return "Multimedia";
+        return "multimedia";
       }
       if (token == "Development") {
-        return "Development";
+        return "development";
       }
       if (token == "Game") {
-        return "Games";
+        return "games";
       }
       if (token == "Graphics") {
-        return "Graphics";
+        return "graphics";
       }
       if (token == "Network") {
-        return "Internet";
+        return "internet";
       }
       if (token == "Office") {
-        return "Office";
+        return "office";
       }
       if (token == "System") {
-        return "System";
+        return "system";
       }
       if (token == "Utility" || token == "Settings") {
-        return "Utilities";
+        return "utilities";
       }
       if (token == "Education" || token == "Science") {
-        return "Education";
+        return "education";
       }
       if (semi == std::string_view::npos) {
         break;
@@ -96,12 +123,15 @@ AppProvider::AppProvider(ConfigService* config, CompositorPlatform* platform)
 
 void AppProvider::initialize() { refreshEntriesIfNeeded(); }
 
+std::string AppProvider::displayName() const { return i18n::tr("launcher.providers.applications.title"); }
+
 std::vector<LauncherCategory> AppProvider::categories() const {
-  return {
-      {"Internet", "world"},         {"Multimedia", "player-play"}, {"Development", "code"},
-      {"Games", "device-gamepad-2"}, {"Graphics", "photo"},         {"Office", "briefcase"},
-      {"Education", "school"},       {"System", "settings"},        {"Utilities", "tool"},
-  };
+  std::vector<LauncherCategory> result;
+  result.reserve(kAppCategories.size());
+  for (const auto& def : kAppCategories) {
+    result.push_back({appCategoryLabel(def.id), std::string(def.glyph)});
+  }
+  return result;
 }
 
 void AppProvider::refreshEntriesIfNeeded() const {
@@ -126,7 +156,8 @@ std::vector<LauncherResult> AppProvider::query(std::string_view text) const {
     result.subtitle = entry.genericName.empty() ? entry.comment : entry.genericName;
     result.iconName = entry.icon.empty() ? std::string(kDefaultAppIcon) : entry.icon;
     result.glyphName = "app-window";
-    result.category = std::string(primaryCategory(entry.categories));
+    const std::string_view categoryId = primaryCategory(entry.categories);
+    result.category = categoryId.empty() ? std::string() : appCategoryLabel(categoryId);
     result.score = s;
     return result;
   };

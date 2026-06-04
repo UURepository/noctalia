@@ -52,6 +52,8 @@ namespace {
 
 WindowProvider::WindowProvider(CompositorPlatform* platform) : m_platform(platform) {}
 
+std::string WindowProvider::displayName() const { return i18n::tr("launcher.providers.window.title"); }
+
 std::vector<LauncherResult> WindowProvider::query(std::string_view text) const {
   auto candidates = collectWindows(m_platform);
   if (candidates.empty()) {
@@ -65,7 +67,6 @@ std::vector<LauncherResult> WindowProvider::query(std::string_view text) const {
     result.subtitle = candidate.window.appId;
     result.iconName = candidate.window.appId;
     result.glyphName = "app-window";
-    result.category = i18n::tr("launcher.providers.window.category");
     result.score = score;
     return result;
   };
@@ -109,7 +110,7 @@ bool WindowProvider::activate(const LauncherResult& result) {
   if (m_platform == nullptr || result.id.empty()) {
     return false;
   }
-  if (!result.providerName.empty() && result.providerName != name()) {
+  if (!result.providerId.empty() && result.providerId != id()) {
     return false;
   }
 

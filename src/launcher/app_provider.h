@@ -14,7 +14,8 @@ public:
   explicit AppProvider(ConfigService* config, CompositorPlatform* platform = nullptr);
 
   [[nodiscard]] std::string_view prefix() const override { return ""; }
-  [[nodiscard]] std::string_view name() const override { return "Applications"; }
+  [[nodiscard]] std::string_view id() const override { return "Applications"; }
+  [[nodiscard]] std::string displayName() const override;
   [[nodiscard]] std::string_view defaultGlyphName() const override { return "app-window"; }
   [[nodiscard]] bool trackUsage() const override { return true; }
 

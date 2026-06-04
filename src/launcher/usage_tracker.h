@@ -12,10 +12,10 @@ class UsageTracker {
 public:
   UsageTracker();
 
-  void record(std::string_view providerName, std::string_view resultId);
-  [[nodiscard]] int getCount(std::string_view providerName, std::string_view resultId) const;
-  [[nodiscard]] int getRecentlyUsedIndex(std::string_view providerName, std::string_view resultId) const;
-  [[nodiscard]] std::size_t getRecentlyUsedCount(std::string_view providerName) const;
+  void record(std::string_view providerId, std::string_view resultId);
+  [[nodiscard]] int getCount(std::string_view providerId, std::string_view resultId) const;
+  [[nodiscard]] int getRecentlyUsedIndex(std::string_view providerId, std::string_view resultId) const;
+  [[nodiscard]] std::size_t getRecentlyUsedCount(std::string_view providerId) const;
 
 private:
   void load();

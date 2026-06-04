@@ -39,7 +39,7 @@ namespace {
   constexpr float kIconSizeCompact = 28.0f;
   constexpr double kUsageScorePerCount = 0.1;
   constexpr double kTypedUsageScoreCap = 0.5;
-  constexpr std::string_view kProviderOverviewProviderName = "__launcher_provider_overview__";
+  constexpr std::string_view kProviderOverviewProviderId = "__launcher_provider_overview__";
   constexpr std::string_view kProviderOverviewResultPrefix = "provider:";
 
   double usageBoostForScore(double score, int usageCount, bool typedQuery) {
@@ -635,7 +635,7 @@ void LauncherPanel::onIconThemeChanged() {
   std::string selectedProvider;
   std::string selectedId;
   if (m_selectedIndex < m_results.size()) {
-    selectedProvider = m_results[m_selectedIndex].providerName;
+    selectedProvider = m_results[m_selectedIndex].providerId;
     selectedId = m_results[m_selectedIndex].id;
   }
 
@@ -643,7 +643,7 @@ void LauncherPanel::onIconThemeChanged() {
 
   if (!selectedId.empty()) {
     for (std::size_t i = 0; i < m_results.size(); ++i) {
-      if (m_results[i].providerName == selectedProvider && m_results[i].id == selectedId) {
+      if (m_results[i].providerId == selectedProvider && m_results[i].id == selectedId) {
         m_selectedIndex = i;
         break;
       }
@@ -691,9 +691,9 @@ void LauncherPanel::onInputChanged(const std::string& text) {
 
   auto applyUsageBoost = [&](std::vector<LauncherResult>& results, const LauncherProvider& provider) {
     for (auto& result : results) {
-      const int usageCount = m_usageTracker.getCount(provider.name(), result.id);
+      const int usageCount = m_usageTracker.getCount(provider.id(), result.id);
       result.score += usageBoostForScore(result.score, usageCount, typedQuery);
-      result.recentlyUsedIndex = m_usageTracker.getRecentlyUsedIndex(provider.name(), result.id);
+      result.recentlyUsedIndex = m_usageTracker.getRecentlyUsedIndex(provider.id(), result.id);
     }
   };
 
@@ -705,12 +705,12 @@ void LauncherPanel::onInputChanged(const std::string& text) {
     m_allResults = activeProvider->query(queryText);
     if (activeProvider->trackUsage()) {
       applyUsageBoost(m_allResults, *activeProvider);
-      if (m_usageTracker.getRecentlyUsedCount(activeProvider->name()) > 0) {
+      if (m_usageTracker.getRecentlyUsedCount(activeProvider->id()) > 0) {
         hasRecentlyUsed = true;
       }
     }
     for (auto& result : m_allResults) {
-      result.providerName = activeProvider->name();
+      result.providerId = activeProvider->id();
     }
     newCategories = activeProvider->categories();
   } else if (startsWithSlash(text)) {
@@ -722,12 +722,12 @@ void LauncherPanel::onInputChanged(const std::string& text) {
         auto results = provider->query(queryText);
         if (provider->trackUsage()) {
           applyUsageBoost(results, *provider);
-          if (m_usageTracker.getRecentlyUsedCount(provider->name()) > 0) {
+          if (m_usageTracker.getRecentlyUsedCount(provider->id()) > 0) {
             hasRecentlyUsed = true;
           }
         }
         for (auto& result : results) {
-          result.providerName = provider->name();
+          result.providerId = provider->id();
         }
         m_allResults.insert(
             m_allResults.end(), std::make_move_iterator(results.begin()), std::make_move_iterator(results.end())
@@ -860,7 +860,7 @@ std::vector<LauncherResult> LauncherPanel::providerOverviewResults(std::string_v
 
     LauncherResult result;
     result.id = providerOverviewId(prefix);
-    result.providerName = std::string(kProviderOverviewProviderName);
+    result.providerId = std::string(kProviderOverviewProviderId);
     result.title = title;
     result.subtitle = prefixText;
     result.glyphName = std::string(provider->defaultGlyphName());
@@ -883,14 +883,13 @@ void LauncherPanel::applyActiveCategory() {
     m_results = m_allResults;
     break;
   case RecentlyUsed:
-    std::copy_if(
-        m_allResults.begin(), m_allResults.end(), std::back_inserter(m_results),
-        [this](const LauncherResult& r) { return r.recentlyUsedIndex > 0; }
-    );
+    std::copy_if(m_allResults.begin(), m_allResults.end(), std::back_inserter(m_results), [](const LauncherResult& r) {
+      return r.recentlyUsedIndex > 0;
+    });
     std::sort(m_results.begin(), m_results.end(), [](const LauncherResult& a, const LauncherResult& b) {
       return a.recentlyUsedIndex > b.recentlyUsedIndex
           || (a.recentlyUsedIndex == b.recentlyUsedIndex
-              && std::tie(a.providerName, a.id) < std::tie(b.providerName, b.id));
+              && std::tie(a.providerId, a.id) < std::tie(b.providerId, b.id));
     });
     break;
   case Category:
@@ -1069,14 +1068,14 @@ void LauncherPanel::openAppActionsMenu(std::size_t index, float anchorX, float a
     }
 
     for (auto& provider : m_providers) {
-      if (provider->name() != std::string_view(result.providerName)) {
+      if (provider->id() != std::string_view(result.providerId)) {
         continue;
       }
       if (!provider->activate(result)) {
         return;
       }
       if (provider->trackUsage()) {
-        m_usageTracker.record(provider->name(), result.id);
+        m_usageTracker.record(provider->id(), result.id);
       }
       PanelManager::instance().closePanel(false);
       return;
@@ -1110,7 +1109,7 @@ void LauncherPanel::activateSelected() {
   }
 
   const auto& result = m_results[m_selectedIndex];
-  if (result.providerName == kProviderOverviewProviderName && result.id.starts_with(kProviderOverviewResultPrefix)) {
+  if (result.providerId == kProviderOverviewProviderId && result.id.starts_with(kProviderOverviewResultPrefix)) {
     std::string prefix = result.id.substr(kProviderOverviewResultPrefix.size());
     if (!prefix.empty()) {
       prefix += ' ';
@@ -1128,7 +1127,7 @@ void LauncherPanel::activateSelected() {
   // Dispatch only to the provider that produced this result. Providers can use
   // overlapping id shapes, so probing every provider risks side effects.
   for (auto& provider : m_providers) {
-    if (provider->name() != std::string_view(result.providerName)) {
+    if (provider->id() != std::string_view(result.providerId)) {
       continue;
     }
 
@@ -1137,7 +1136,7 @@ void LauncherPanel::activateSelected() {
     }
 
     if (provider->trackUsage()) {
-      m_usageTracker.record(provider->name(), result.id);
+      m_usageTracker.record(provider->id(), result.id);
     }
     PanelManager::instance().closePanel(false);
     return;

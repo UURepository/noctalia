@@ -1,6 +1,7 @@
 #include "launcher/wallpaper_provider.h"
 
 #include "config/config_service.h"
+#include "i18n/i18n.h"
 #include "shell/wallpaper/wallpaper_paths.h"
 #include "util/fuzzy_match.h"
 #include "util/string_utils.h"
@@ -68,6 +69,8 @@ namespace {
 WallpaperProvider::WallpaperProvider(ConfigService* config, WaylandConnection* wayland)
     : m_config(config), m_wayland(wayland) {}
 
+std::string WallpaperProvider::displayName() const { return i18n::tr("launcher.providers.wallpaper.title"); }
+
 std::vector<LauncherResult> WallpaperProvider::query(std::string_view text) const {
   if (m_config == nullptr) {
     return {};
@@ -116,7 +119,7 @@ bool WallpaperProvider::activate(const LauncherResult& result) {
   if (m_config == nullptr || result.id.empty()) {
     return false;
   }
-  if (!result.providerName.empty() && result.providerName != name()) {
+  if (!result.providerId.empty() && result.providerId != id()) {
     return false;
   }
 

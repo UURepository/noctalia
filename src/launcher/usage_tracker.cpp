@@ -18,17 +18,17 @@ UsageTracker::UsageTracker() {
   load();
 }
 
-void UsageTracker::record(std::string_view providerName, std::string_view resultId) {
-  ++m_counts[std::string(providerName)][std::string(resultId)];
+void UsageTracker::record(std::string_view providerId, std::string_view resultId) {
+  ++m_counts[std::string(providerId)][std::string(resultId)];
 
-  auto& recentlyUsedList = m_recentlyUsed[std::string(providerName)];
+  auto& recentlyUsedList = m_recentlyUsed[std::string(providerId)];
   const auto id = std::string(resultId);
   recentlyUsedList.erase(std::remove(recentlyUsedList.begin(), recentlyUsedList.end(), id), recentlyUsedList.end());
   recentlyUsedList.push_front(id);
   while (recentlyUsedList.size() > kMaxRecentlyUsedCount) {
     recentlyUsedList.pop_back();
   }
-  auto& indexMap = m_recentlyUsedIndex[std::string(providerName)];
+  auto& indexMap = m_recentlyUsedIndex[std::string(providerId)];
   indexMap.clear();
   for (std::size_t i = 0; i < recentlyUsedList.size(); ++i) {
     indexMap[recentlyUsedList[i]] = static_cast<int>(recentlyUsedList.size() - i);
@@ -37,8 +37,8 @@ void UsageTracker::record(std::string_view providerName, std::string_view result
   save();
 }
 
-int UsageTracker::getCount(std::string_view providerName, std::string_view resultId) const {
-  const auto provIt = m_counts.find(std::string(providerName));
+int UsageTracker::getCount(std::string_view providerId, std::string_view resultId) const {
+  const auto provIt = m_counts.find(std::string(providerId));
   if (provIt == m_counts.end()) {
     return 0;
   }
@@ -46,8 +46,8 @@ int UsageTracker::getCount(std::string_view providerName, std::string_view resul
   return idIt != provIt->second.end() ? idIt->second : 0;
 }
 
-int UsageTracker::getRecentlyUsedIndex(std::string_view providerName, std::string_view resultId) const {
-  const auto provIt = m_recentlyUsedIndex.find(std::string(providerName));
+int UsageTracker::getRecentlyUsedIndex(std::string_view providerId, std::string_view resultId) const {
+  const auto provIt = m_recentlyUsedIndex.find(std::string(providerId));
   if (provIt == m_recentlyUsedIndex.end()) {
     return 0;
   }
@@ -55,8 +55,8 @@ int UsageTracker::getRecentlyUsedIndex(std::string_view providerName, std::strin
   return idIt != provIt->second.end() ? idIt->second : 0;
 }
 
-std::size_t UsageTracker::getRecentlyUsedCount(std::string_view providerName) const {
-  const auto provIt = m_recentlyUsed.find(std::string(providerName));
+std::size_t UsageTracker::getRecentlyUsedCount(std::string_view providerId) const {
+  const auto provIt = m_recentlyUsed.find(std::string(providerId));
   return provIt != m_recentlyUsed.end() ? provIt->second.size() : 0;
 }
 

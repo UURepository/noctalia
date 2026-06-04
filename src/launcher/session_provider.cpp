@@ -177,6 +177,8 @@ namespace {
 SessionProvider::SessionProvider(ConfigService* config, SessionActionRunner* actionRunner)
     : m_config(config), m_actionRunner(actionRunner) {}
 
+std::string SessionProvider::displayName() const { return i18n::tr("launcher.providers.session.title"); }
+
 std::vector<LauncherResult> SessionProvider::query(std::string_view text) const {
   auto entries = collectActions(m_config);
   if (entries.empty()) {
@@ -189,7 +191,6 @@ std::vector<LauncherResult> SessionProvider::query(std::string_view text) const 
     result.title = entry.title;
     result.subtitle = entry.subtitle;
     result.glyphName = entry.glyph;
-    result.category = i18n::tr("launcher.providers.session.category");
     result.score = score;
     return result;
   };
@@ -233,7 +234,7 @@ bool SessionProvider::activate(const LauncherResult& result) {
   if (m_actionRunner == nullptr) {
     return false;
   }
-  if (!result.providerName.empty() && result.providerName != name()) {
+  if (!result.providerId.empty() && result.providerId != id()) {
     return false;
   }
 

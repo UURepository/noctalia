@@ -1,6 +1,7 @@
 #include "launcher/math_provider.h"
 
 #include "config/config_service.h"
+#include "i18n/i18n.h"
 #include "net/http_client.h"
 #include "wayland/clipboard_service.h"
 
@@ -45,6 +46,8 @@ MathProvider::MathProvider(ClipboardService* clipboard, ConfigService* config, H
     : m_clipboard(clipboard), m_config(config), m_httpClient(httpClient) {}
 
 MathProvider::~MathProvider() = default;
+
+std::string MathProvider::displayName() const { return i18n::tr("launcher.providers.calculator.title"); }
 
 void MathProvider::initialize() {
   m_calc = std::make_unique<Calculator>();
