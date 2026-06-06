@@ -282,13 +282,11 @@ namespace settings {
               }
             }
             (void)FileDialog::open(
-                std::move(options), [setOverride, path, inputPtr](std::optional<std::filesystem::path> picked) {
+                std::move(options), [setOverride, path](std::optional<std::filesystem::path> picked) {
                   if (!picked.has_value()) {
                     return;
                   }
-                  const std::string s = picked->string();
-                  inputPtr->setValue(s);
-                  setOverride(path, s);
+                  setOverride(path, picked->string());
                 }
             );
           },
