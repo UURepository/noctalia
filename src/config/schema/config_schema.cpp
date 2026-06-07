@@ -33,6 +33,21 @@ namespace noctalia::config::schema {
     return s;
   }
 
+  const Schema<OsdKindsConfig>& osdKindsSchema() {
+    static const Schema<OsdKindsConfig> s = {
+        field(&OsdKindsConfig::volume, "volume"),
+        field(&OsdKindsConfig::brightness, "brightness"),
+        field(&OsdKindsConfig::wifi, "wifi"),
+        field(&OsdKindsConfig::bluetooth, "bluetooth"),
+        field(&OsdKindsConfig::powerProfile, "power_profile"),
+        field(&OsdKindsConfig::caffeine, "caffeine"),
+        field(&OsdKindsConfig::dnd, "dnd"),
+        field(&OsdKindsConfig::lockKeys, "lock_keys"),
+        field(&OsdKindsConfig::keyboardLayout, "keyboard_layout"),
+    };
+    return s;
+  }
+
   const Schema<OsdConfig>& osdSchema() {
     static const Schema<OsdConfig> s = {
         field(&OsdConfig::position, "position"),
@@ -42,8 +57,7 @@ namespace noctalia::config::schema {
         field(&OsdConfig::offsetX, "offset_x", Range<std::int64_t>{0, std::nullopt}),
         field(&OsdConfig::offsetY, "offset_y", Range<std::int64_t>{0, std::nullopt}),
         field(&OsdConfig::monitors, "monitors"),
-        field(&OsdConfig::lockKeys, "lock_keys"),
-        field(&OsdConfig::keyboardLayout, "keyboard_layout"),
+        subTable(&OsdConfig::kinds, "kinds", osdKindsSchema()),
     };
     return s;
   }

@@ -1347,14 +1347,49 @@ namespace settings {
         sliderFor(cfg.osd.backgroundOpacity, noctalia::config::schema::kUnitRange, false), "hud overlay popup opacity"
     ));
     entries.push_back(makeEntry(
-        SettingsSection::Osd, "osd", tr("settings.schema.shell.osd-lock-keys.label"),
-        tr("settings.schema.shell.osd-lock-keys.description"), {"osd", "lock_keys"}, ToggleSetting{cfg.osd.lockKeys},
-        "hud overlay caps num scroll keyboard"
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-volume.label"),
+        tr("settings.schema.shell.osd-kinds-volume.description"), {"osd", "kinds", "volume"},
+        ToggleSetting{cfg.osd.kinds.volume}, "hud overlay audio output input microphone"
     ));
     entries.push_back(makeEntry(
-        SettingsSection::Osd, "osd", tr("settings.schema.shell.osd-keyboard-layout.label"),
-        tr("settings.schema.shell.osd-keyboard-layout.description"), {"osd", "keyboard_layout"},
-        ToggleSetting{cfg.osd.keyboardLayout}, "hud overlay xkb input language layout switch"
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-brightness.label"),
+        tr("settings.schema.shell.osd-kinds-brightness.description"), {"osd", "kinds", "brightness"},
+        ToggleSetting{cfg.osd.kinds.brightness}, "hud overlay display backlight"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-wifi.label"),
+        tr("settings.schema.shell.osd-kinds-wifi.description"), {"osd", "kinds", "wifi"},
+        ToggleSetting{cfg.osd.kinds.wifi}, "hud overlay wireless network"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-bluetooth.label"),
+        tr("settings.schema.shell.osd-kinds-bluetooth.description"), {"osd", "kinds", "bluetooth"},
+        ToggleSetting{cfg.osd.kinds.bluetooth}, "hud overlay bt"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-power-profile.label"),
+        tr("settings.schema.shell.osd-kinds-power-profile.description"), {"osd", "kinds", "power_profile"},
+        ToggleSetting{cfg.osd.kinds.powerProfile}, "hud overlay balanced performance power saver"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-caffeine.label"),
+        tr("settings.schema.shell.osd-kinds-caffeine.description"), {"osd", "kinds", "caffeine"},
+        ToggleSetting{cfg.osd.kinds.caffeine}, "hud overlay idle inhibitor"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-dnd.label"),
+        tr("settings.schema.shell.osd-kinds-dnd.description"), {"osd", "kinds", "dnd"},
+        ToggleSetting{cfg.osd.kinds.dnd}, "hud overlay do not disturb notifications"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-lock-keys.label"),
+        tr("settings.schema.shell.osd-kinds-lock-keys.description"), {"osd", "kinds", "lock_keys"},
+        ToggleSetting{cfg.osd.kinds.lockKeys}, "hud overlay caps num scroll keyboard"
+    ));
+    entries.push_back(makeEntry(
+        SettingsSection::Osd, "kinds", tr("settings.schema.shell.osd-kinds-keyboard-layout.label"),
+        tr("settings.schema.shell.osd-kinds-keyboard-layout.description"), {"osd", "kinds", "keyboard_layout"},
+        ToggleSetting{cfg.osd.kinds.keyboardLayout}, "hud overlay xkb input language layout switch"
     ));
     entries.push_back(makeEntry(
         SettingsSection::Osd, "osd", tr("settings.schema.shell.osd-monitors.label"),

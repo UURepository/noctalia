@@ -522,6 +522,20 @@ struct LockscreenWidgetsConfig {
   bool operator==(const LockscreenWidgetsConfig&) const = default;
 };
 
+struct OsdKindsConfig {
+  bool volume = true;
+  bool brightness = true;
+  bool wifi = true;
+  bool bluetooth = true;
+  bool powerProfile = true;
+  bool caffeine = true;
+  bool dnd = true;
+  bool lockKeys = true;
+  bool keyboardLayout = true;
+
+  bool operator==(const OsdKindsConfig&) const = default;
+};
+
 struct OsdConfig {
   std::string position = "top_center";
   std::string orientation = "horizontal";
@@ -530,8 +544,7 @@ struct OsdConfig {
   int offsetX = 20;
   int offsetY = 8;
   std::vector<std::string> monitors;
-  bool lockKeys = true;
-  bool keyboardLayout = true;
+  OsdKindsConfig kinds;
 
   bool operator==(const OsdConfig&) const = default;
 };

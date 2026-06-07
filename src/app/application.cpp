@@ -95,6 +95,7 @@ namespace {
 
   OsdContent powerProfileOsdContent(std::string_view profile) {
     return OsdContent{
+        .kind = OsdKind::PowerProfile,
         .icon = std::string(profileGlyphName(profile)),
         .value = profileLabel(profile),
         .showProgress = false,
@@ -103,6 +104,7 @@ namespace {
 
   OsdContent caffeineOsdContent(bool enabled) {
     return OsdContent{
+        .kind = OsdKind::Caffeine,
         .icon = enabled ? "caffeine-on" : "caffeine-off",
         .value = i18n::tr(enabled ? "osd.caffeine.on" : "osd.caffeine.off"),
         .showProgress = false,
@@ -111,6 +113,7 @@ namespace {
 
   OsdContent dndOsdContent(bool enabled) {
     return OsdContent{
+        .kind = OsdKind::Dnd,
         .icon = enabled ? "bell-off" : "bell",
         .value = i18n::tr(enabled ? "osd.dnd.on" : "osd.dnd.off"),
         .showProgress = false,
@@ -119,6 +122,7 @@ namespace {
 
   OsdContent wifiOsdContent(bool enabled) {
     return OsdContent{
+        .kind = OsdKind::Wifi,
         .icon = enabled ? "wifi" : "wifi-off",
         .value = i18n::tr(enabled ? "osd.wifi.on" : "osd.wifi.off"),
         .showProgress = false,
@@ -127,6 +131,7 @@ namespace {
 
   OsdContent bluetoothOsdContent(bool enabled) {
     return OsdContent{
+        .kind = OsdKind::Bluetooth,
         .icon = enabled ? "bluetooth" : "bluetooth-off",
         .value = i18n::tr(enabled ? "osd.bluetooth.on" : "osd.bluetooth.off"),
         .showProgress = false,
@@ -151,7 +156,9 @@ namespace {
     });
   }
 
-  bool lockKeysConsumersEnabled(const Config& config) { return config.osd.lockKeys || configHasLockKeysWidget(config); }
+  bool lockKeysConsumersEnabled(const Config& config) {
+    return config.osd.kinds.lockKeys || configHasLockKeysWidget(config);
+  }
 
   template <typename Fn> void runStartupPhase(std::string_view label, Fn&& fn) {
     constexpr float kSlowStartupPhaseDebugMs = 50.0f;
@@ -585,7 +592,7 @@ void Application::initServices() {
   m_compositorPlatform.setWorkspaceChangeCallback([this]() { m_bar.refresh(); });
   m_compositorPlatform.setKeyboardLayoutChangeCallback([this]() {
     m_bar.refresh();
-    if (m_configService.config().osd.keyboardLayout) {
+    if (m_configService.config().osd.kinds.keyboardLayout) {
       m_keyboardLayoutOsd.onLayoutChanged(m_compositorPlatform);
     }
   });
@@ -604,7 +611,7 @@ void Application::initServices() {
     m_lockKeysService.setChangeCallback(
         [this](const WaylandSeat::LockKeysState& previous, const WaylandSeat::LockKeysState& current) {
           const Config& config = m_configService.config();
-          if (config.osd.lockKeys) {
+          if (config.osd.kinds.lockKeys) {
             m_lockKeysOsd.onLockKeysChanged(previous, current);
           }
           if (configHasLockKeysWidget(config)) {
@@ -1534,7 +1541,7 @@ void Application::initUi() {
       m_desktopWidgetsController.onSecondTick();
       m_lockscreenWidgetsController.onSecondTick();
       m_settingsWindow.onSecondTick();
-      if (m_configService.config().osd.keyboardLayout) {
+      if (m_configService.config().osd.kinds.keyboardLayout) {
         m_keyboardLayoutOsd.onLayoutChanged(m_compositorPlatform);
       }
     }

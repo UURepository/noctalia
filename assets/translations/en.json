@@ -857,6 +857,7 @@
         "home": "Home",
         "interface": "Interface",
         "keybinds": "Keybinds",
+        "kinds": "Kinds",
         "launcher": "Launcher",
         "layout": "Layout",
         "lifecycle": "Lifecycle",
@@ -1938,13 +1939,41 @@
           "description": "Background opacity of OSD popups",
           "label": "Background Opacity"
         },
-        "osd-keyboard-layout": {
+        "osd-kinds-bluetooth": {
+          "description": "Show an OSD popup when Bluetooth is toggled",
+          "label": "Bluetooth"
+        },
+        "osd-kinds-brightness": {
+          "description": "Show an OSD popup when display brightness changes",
+          "label": "Brightness"
+        },
+        "osd-kinds-caffeine": {
+          "description": "Show an OSD popup when the caffeine (idle inhibitor) state changes",
+          "label": "Caffeine"
+        },
+        "osd-kinds-dnd": {
+          "description": "Show an OSD popup when Do Not Disturb is toggled",
+          "label": "Do Not Disturb"
+        },
+        "osd-kinds-keyboard-layout": {
           "description": "Show an OSD popup when the input keyboard layout changes",
           "label": "Keyboard Layout"
         },
-        "osd-lock-keys": {
+        "osd-kinds-lock-keys": {
           "description": "Show OSD popups for Caps Lock, Num Lock, and Scroll Lock changes",
           "label": "Lock Keys"
+        },
+        "osd-kinds-power-profile": {
+          "description": "Show an OSD popup when the power profile changes",
+          "label": "Power Profile"
+        },
+        "osd-kinds-volume": {
+          "description": "Show OSD popups when output or input volume changes",
+          "label": "Volume"
+        },
+        "osd-kinds-wifi": {
+          "description": "Show an OSD popup when Wi-Fi is toggled",
+          "label": "Wi-Fi"
         },
         "osd-monitors": {
           "description": "Choose which monitors show OSD popups; leave empty to show on all monitors",

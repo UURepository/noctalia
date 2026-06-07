@@ -8,6 +8,7 @@ namespace {
 
   OsdContent makeKeyboardLayoutContent(const std::string& layoutName) {
     return OsdContent{
+        .kind = OsdKind::KeyboardLayout,
         .icon = "keyboard",
         .value = KeyboardLayoutWidget::formatLayoutLabel(layoutName, KeyboardLayoutWidget::DisplayMode::Short),
         .showProgress = false,
