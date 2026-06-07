@@ -732,6 +732,54 @@ void ConfigService::setDockEnabled(bool enabled) {
   fireReloadCallbacks();
 }
 
+void ConfigService::setNightlightEnabled(bool enabled) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  auto* nightlightTbl = ensureTable(m_overridesTable, "nightlight");
+  const auto existing = (*nightlightTbl)["enabled"].value<bool>();
+  if (existing.has_value() && *existing == enabled && m_config.nightlight.enabled == enabled) {
+    return;
+  }
+
+  nightlightTbl->insert_or_assign("enabled", enabled);
+
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+
+  m_ownOverridesWritePending = true;
+
+  loadAll();
+  fireReloadCallbacks();
+}
+
+void ConfigService::setNightlightForce(bool force) {
+  if (m_overridesPath.empty()) {
+    return;
+  }
+
+  auto* nightlightTbl = ensureTable(m_overridesTable, "nightlight");
+  const auto existing = (*nightlightTbl)["force"].value<bool>();
+  if (existing.has_value() && *existing == force && m_config.nightlight.force == force) {
+    return;
+  }
+
+  nightlightTbl->insert_or_assign("force", force);
+
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return;
+  }
+
+  m_ownOverridesWritePending = true;
+
+  loadAll();
+  fireReloadCallbacks();
+}
+
 namespace {
 
   void writeWidgetsPlacementToTable(

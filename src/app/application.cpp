@@ -640,6 +640,7 @@ void Application::initServices() {
       },
       "hooks"
   );
+  m_gammaService.bindConfigService(m_configService);
   m_gammaService.setLocationResolving(m_locationService.resolving());
   m_gammaService.reload(m_configService.config().nightlight, m_configService.config().location);
   m_gammaService.setChangeCallback([this, shouldRefreshControlCenter]() {

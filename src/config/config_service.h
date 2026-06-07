@@ -98,6 +98,9 @@ public:
   [[nodiscard]] bool setThemeColorScheme(PaletteSource source, std::string_view value);
   // Persist dock enabled override to settings.toml and trigger the reload pipeline.
   void setDockEnabled(bool enabled);
+  // Persist night light overrides to settings.toml and trigger the reload pipeline.
+  void setNightlightEnabled(bool enabled);
+  void setNightlightForce(bool force);
   // Persist desktop widget layout/editor state to settings.toml and trigger the reload pipeline.
   bool setDesktopWidgetsState(const DesktopWidgetsConfig& desktopWidgets);
   bool setLockscreenWidgetsState(const LockscreenWidgetsConfig& lockscreenWidgets);
