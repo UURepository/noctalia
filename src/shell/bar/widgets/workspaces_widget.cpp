@@ -36,6 +36,34 @@ namespace {
     }
     return baseWeight;
   }
+
+  struct LabelCenterOffsets {
+    float horizontal = 0.0f;
+    float vertical = 0.0f;
+  };
+
+  // Offsets to recenter a label's ink box within its slot. Numeric labels
+  // (workspace IDs) are special-cased: per-glyph ink extents are subpixel and
+  // unhinted now that Fontconfig hinting is honored, so the apex of "4" vs the
+  // flat top of "1" land on different pixels after rounding. Horizontal uses
+  // logical centering (uniform digit advances align). Vertical keeps ink
+  // centering — digits have no descender, so the logical box sits high — but
+  // derives it from a fixed digit reference so every digit shares one center.
+  [[nodiscard]] LabelCenterOffsets
+  labelCenterOffsets(Renderer& renderer, std::string_view label, bool numeric, float fontSize, FontWeight fontWeight) {
+    const TextMetrics tm = renderer.measureText(label, fontSize, fontWeight);
+    const float logCenter = (tm.left + tm.right) * 0.5f;
+    const float logVCenter = (tm.top + tm.bottom) * 0.5f;
+    LabelCenterOffsets out;
+    if (numeric) {
+      const TextMetrics ref = renderer.measureText("0123456789", fontSize, fontWeight);
+      out.vertical = (ref.inkTop + ref.inkBottom) * 0.5f - logVCenter;
+    } else {
+      out.horizontal = (tm.inkLeft + tm.inkRight) * 0.5f - logCenter;
+      out.vertical = (tm.inkTop + tm.inkBottom) * 0.5f - logVCenter;
+    }
+    return out;
+  }
 } // namespace
 
 WorkspacesWidget::WorkspacesWidget(
@@ -241,12 +269,10 @@ void WorkspacesWidget::rebuild(Renderer& renderer) {
       const FontWeight slotFontWeight = workspaceFontWeight(configuredFontWeight, m_minimal, workspaces[i].active);
       const TextMetrics tm = renderer.measureText(labels[i], labelFontSize, slotFontWeight);
       slot.textWidth = std::max(tm.right - tm.left, tm.inkRight - tm.inkLeft);
-      const float logicalCenter = (tm.left + tm.right) * 0.5f;
-      const float inkCenter = (tm.inkLeft + tm.inkRight) * 0.5f;
-      slot.inkCenterOffset = slot.isNumeric ? 0.0f : (inkCenter - logicalCenter);
-      const float logicalVCenter = (tm.top + tm.bottom) * 0.5f;
-      const float inkVCenter = (tm.inkTop + tm.inkBottom) * 0.5f;
-      slot.inkVCenterOffset = inkVCenter - logicalVCenter;
+      const LabelCenterOffsets off =
+          labelCenterOffsets(renderer, labels[i], slot.isNumeric, labelFontSize, slotFontWeight);
+      slot.inkCenterOffset = off.horizontal;
+      slot.inkVCenterOffset = off.vertical;
     }
   }
 
@@ -424,13 +450,12 @@ void WorkspacesWidget::retarget(Renderer& renderer) {
       if (labelChanged || weightChanged) {
         it.text->measure(renderer);
         const float fontSize = it.text->fontSize();
-        const TextMetrics tm = renderer.measureText(label, fontSize, fontWeight);
-        const float logCenter = (tm.left + tm.right) * 0.5f;
-        const float inkCenter = (tm.inkLeft + tm.inkRight) * 0.5f;
-        it.inkCenterOffset = inkCenter - logCenter;
-        const float logVCenter = (tm.top + tm.bottom) * 0.5f;
-        const float inkVCenter = (tm.inkTop + tm.inkBottom) * 0.5f;
-        it.inkVCenterOffset = inkVCenter - logVCenter;
+        const bool numeric = !label.empty() && std::all_of(label.begin(), label.end(), [](char c) {
+          return std::isdigit(static_cast<unsigned char>(c));
+        });
+        const LabelCenterOffsets off = labelCenterOffsets(renderer, label, numeric, fontSize, fontWeight);
+        it.inkCenterOffset = off.horizontal;
+        it.inkVCenterOffset = off.vertical;
       }
     }
     if (it.indicator != nullptr) {
