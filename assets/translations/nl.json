@@ -22,11 +22,11 @@
     },
     "widgets": {
       "lock-keys": {
-        "caps": "Caps Lock",
+        "caps": "Caps",
         "caps-short": "C",
-        "num": "Num Lock",
+        "num": "Num",
         "num-short": "N",
-        "scroll": "Scroll Lock",
+        "scroll": "Scroll",
         "scroll-short": "S"
       },
       "media": {
@@ -47,9 +47,9 @@
         "no-location": "Geen locatie",
         "off": "Weer uit",
         "vertical-default": "W\nX",
-        "vertical-error": "F\nO\nU\nT",
+        "vertical-error": "E\nR\nR",
         "vertical-loading": ".\n.\n.",
-        "vertical-no-location": "G\nE\nE\nN\nL",
+        "vertical-no-location": "N\nO\nL\nO\nC",
         "vertical-off": "U\nI\nT"
       }
     }
@@ -126,7 +126,7 @@
       "pair-title": "Koppelen met {device}",
       "pairing-detail": {
         "authorize": "Inkomend koppelingsverzoek accepteren?",
-        "authorize-service": "Toegang toestaan to service {uuid}?",
+        "authorize-service": "Toegang toestaan tot service {uuid}?",
         "confirm": "Bevestig dat deze code overeenkomt met de code op het apparaat:",
         "display-passkey": "Voer deze code in op het apparaat:",
         "display-pin": "Voer deze pincode in op het apparaat:",
@@ -246,8 +246,8 @@
         "scheduled-day": "Gepland",
         "scheduled-night": "Actief"
       },
-      "notification": "Niet storen",
-      "power-profile": "Energiebeheer",
+      "notification": "DND",
+      "power-profile": "Energie",
       "screen-recorder": "Opname",
       "screen-time": "Schermtijd",
       "session": "Sessie",
@@ -410,7 +410,7 @@
       "close": "Sluiten",
       "close-all": "Alles sluiten"
     },
-    "launcher": "Start"
+    "launcher": "Launcher"
   },
   "internal-apps": {
     "settings": {
@@ -712,7 +712,7 @@
           "fill": "Achtergrond",
           "fill-description": "Kleurrol voor capsule-achtergrond; vaste hex-kleuren worden ook ondersteund",
           "foreground": "Voorgrond",
-          "foreground-description": "Icoongebruik- en labelkleurrol voor widgets in deze groep",
+          "foreground-description": "Icoon- en labelkleurrol voor widgets in deze groep",
           "hint": "Onderdeel van een capsulegroep",
           "members": "{count} widgets",
           "opacity": "Dekking",
@@ -860,7 +860,7 @@
         "interface": "Interface",
         "keybinds": "Sneltoetsen",
         "kinds": "Soorten",
-        "launcher": "Start",
+        "launcher": "Launcher",
         "layout": "Layout",
         "lifecycle": "Levenscyclus",
         "location": "Locatie",
@@ -1202,7 +1202,7 @@
           "description": "Hoekradius van de balk"
         },
         "corner-top-left": {
-          "description": "Radius links boven voor the balk"
+          "description": "Radius links boven voor de balk"
         },
         "corner-top-right": {
           "description": "Radius rechts boven voor de balk"
@@ -1276,7 +1276,7 @@
           "label": "Bureaubladwidgets"
         },
         "widgets-editor": {
-          "button": "Editor in-/uitschalelen",
+          "button": "Editor in-/uitschakelen",
           "description": "Bureaubladwidgets toevoegen, verplaatsen en in grootte wijzigen",
           "label": "Widget-editor"
         }
@@ -1298,7 +1298,7 @@
           "description": "Verberg de dock automatisch wanneer deze niet in gebruik is"
         },
         "background-opacity": {
-          "description": "Achtergronddekking of het dock"
+          "description": "Achtergronddekking van het dock"
         },
         "corner-bottom-left": {
           "description": "Radius links onder voor het dock"
@@ -1344,15 +1344,15 @@
           "label": "Item-tussenruimte"
         },
         "launcher-icon": {
-          "description": "Tabler-pictogram weergegeven op de dock-startknop",
-          "label": "Startknop-icoon"
+          "description": "Tabler-pictogram weergegeven op de dock-launcher-knop",
+          "label": "Launcher-knop icoon"
         },
         "launcher-position": {
-          "description": "Toon een startknop aan het begin of einde van het dock",
-          "label": "Startknop"
+          "description": "Toon de launcher knop aan het begin of einde van het dock",
+          "label": "Launcher knop"
         },
         "magnification": {
-          "description": "Vergroot dock-pictogrammen in de buurt van de aanwijzer, macOS-stijl",
+          "description": "Vergroting dock-pictogrammen in de buurt van de aanwijzer, macOS-stijl",
           "label": "Vergroting"
         },
         "magnification-scale": {
@@ -1476,7 +1476,7 @@
         },
         "pre-action-fade": {
           "description": "Aantal seconden dat het scherm dimt vóór het inactiviteitscommando; gebruik 0 om uit te schakelen",
-          "label": "Dimming voor inactiviteit"
+          "label": "Scherm dimmen"
         }
       },
       "keybinds": {
@@ -1524,7 +1524,7 @@
         },
         "wallpaper": {
           "description": "Aangepaste afbeelding voor de achtergrond van het vergrendelscherm. Laat leeg om de bureaubladachtergrond te gebruiken.",
-          "label": "Bureaubladachtergrond",
+          "label": "Achtergrond",
           "placeholder": "Bureaubladachtergrond gebruiken"
         },
         "widgets": {
@@ -1547,7 +1547,7 @@
           "label": "Zwarte lijst voor meldingen"
         },
         "blacklist-allow-critical": {
-          "description": "Toon nog steeds kritieke meldingen van afzenders op de zwarwe lijst",
+          "description": "Toon nog steeds kritieke meldingen van afzenders op de zwarte lijst",
           "label": "Kritieke meldingen doorlaten"
         },
         "collapse-on-dismiss": {
@@ -1613,7 +1613,7 @@
           "label": "Home-snelkoppelingen"
         },
         "launcher-categories": {
-          "description": "Toon categoriefilters in Start; wissel met Tab terwijl Start open is",
+          "description": "Toon categoriefilters in Launcher; wissel met Tab terwijl Launcher open is",
           "label": "Categorieën tonen"
         },
         "launcher-compact": {
@@ -1621,7 +1621,7 @@
           "label": "Compacte rijen"
         },
         "launcher-show-icons": {
-          "description": "Toon applicatiepictogrammen in de resultaten van Start",
+          "description": "Toon applicatiepictogrammen in de resultaten van Launcher",
           "label": "App-iconen tonen"
         },
         "open-near-click-clipboard": {
@@ -1633,7 +1633,7 @@
           "label": "Openen nabij klik"
         },
         "open-near-click-launcher": {
-          "description": "Positioneer het startpaneel dicht bij de klik op de balk in plaats van het langs de balk te centreren",
+          "description": "Positioneer het launcherpaneel dicht bij de klik op de balk in plaats van het langs de balk te centreren",
           "label": "Openen nabij klik"
         },
         "open-near-click-session": {
@@ -1653,7 +1653,7 @@
           "label": "Plaatsing"
         },
         "placement-launcher": {
-          "description": "Kies of Start zich vastmaakt aan de balk, er dichtbij zweeft of gecentreerd opent",
+          "description": "Kies of Launcher zich vastmaakt aan de balk, er dichtbij zweeft of gecentreerd opent",
           "label": "Plaatsing"
         },
         "placement-session": {
@@ -1834,7 +1834,7 @@
           "label": "Achtergronddekking"
         },
         "contact-shadow": {
-          "label": "Seamschaduw"
+          "label": "Naadschaduw"
         },
         "corner-bottom-left": {
           "label": "Radius linksonder"
@@ -2124,7 +2124,7 @@
         },
         "edge-smoothness": {
           "description": "Zachtheid van de overgangsranden tussen achtergronden",
-          "label": "Randsmoothness"
+          "label": "Randvervaging"
         },
         "enabled": {
           "description": "Schakel de achtergronddienst in"
@@ -2135,7 +2135,7 @@
         },
         "fill-mode": {
           "description": "Hoe achtergronden op het scherm passen",
-          "label": "Opvulkleur"
+          "label": "Opvulmodus"
         },
         "monitor-directory": {
           "label": "Achtergrondmap"
@@ -2187,7 +2187,7 @@
         "default": "Standaard",
         "destructive": "Destructief",
         "ghost": "Ghost",
-        "outline": "Omtrek",
+        "outline": "Outline",
         "primary": "Primair",
         "secondary": "Secundair"
       },
@@ -2210,7 +2210,7 @@
         "cpu-usage": "CPU-gebruik",
         "disk-percent": "Schijfpercentage",
         "full": "Volledig",
-        "gauge": "Meter",
+        "gauge": "Gauge",
         "glyph": "Symbool",
         "gpu-temp": "GPU-temperatuur",
         "gpu-usage": "GPU-gebruik",
@@ -2239,7 +2239,7 @@
         "text-only": "Alleen tekst",
         "workspace-label-centered": "Gecentreerd",
         "workspace-label-corner": "Hoek",
-        "workspace-label-inside": "Binnen capsule"
+        "workspace-label-inside": "Binnen de pill"
       },
       "settings": {
         "active-opacity": {
@@ -2644,7 +2644,7 @@
         "control-center": "Controlecentrum",
         "custom-button": "Aangepaste knop",
         "keyboard-layout": "Toetsenbordindeling",
-        "launcher": "Start",
+        "launcher": "Launcher",
         "lock-keys": "Vergrendeltoetsen",
         "media": "Media",
         "network": "Netwerk",
