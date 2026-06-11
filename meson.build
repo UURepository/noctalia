@@ -175,8 +175,9 @@ stb_dep = declare_dependency(
 libwebp_dep = dependency('libwebp', required: true)
 
 # ── Vendored: Luau (Roblox's Lua fork) ────────────────────────────────────────
-# Built as a quiet static library; only VM + Compiler + Ast + Common are vendored.
+# Built as a quiet static library; only VM + Compiler + Bytecode + Ast + Common are vendored.
 _luau_sources = files(
+  'third_party/luau/Common/src/BytecodeWire.cpp',
   'third_party/luau/Common/src/StringUtils.cpp',
   'third_party/luau/Common/src/TimeTrace.cpp',
   'third_party/luau/Ast/src/Allocator.cpp',
@@ -187,9 +188,10 @@ _luau_sources = files(
   'third_party/luau/Ast/src/Location.cpp',
   'third_party/luau/Ast/src/Parser.cpp',
   'third_party/luau/Ast/src/PrettyPrinter.cpp',
+  'third_party/luau/Bytecode/src/BytecodeBuilder.cpp',
+  'third_party/luau/Bytecode/src/BytecodeGraph.cpp',
   'third_party/luau/Compiler/src/BuiltinFolding.cpp',
   'third_party/luau/Compiler/src/Builtins.cpp',
-  'third_party/luau/Compiler/src/BytecodeBuilder.cpp',
   'third_party/luau/Compiler/src/Compiler.cpp',
   'third_party/luau/Compiler/src/ConstantFolding.cpp',
   'third_party/luau/Compiler/src/CostModel.cpp',
@@ -213,6 +215,8 @@ _luau_sources = files(
   'third_party/luau/VM/src/lgcdebug.cpp',
   'third_party/luau/VM/src/linit.cpp',
   'third_party/luau/VM/src/lintlib.cpp',
+  'third_party/luau/VM/src/lclass.cpp',
+  'third_party/luau/VM/src/lclasslib.cpp',
   'third_party/luau/VM/src/lmathlib.cpp',
   'third_party/luau/VM/src/lmem.cpp',
   'third_party/luau/VM/src/lnumprint.cpp',
@@ -235,6 +239,7 @@ _luau_sources = files(
 _luau_inc = include_directories(
   'third_party/luau/Common/include',
   'third_party/luau/Ast/include',
+  'third_party/luau/Bytecode/include',
   'third_party/luau/Compiler/include',
   'third_party/luau/VM/include',
   'third_party/luau/VM/src',
