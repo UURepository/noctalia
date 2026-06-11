@@ -624,12 +624,12 @@ namespace settings {
       add(boolSpec("centered", true));
       add(boolSpec("show_when_idle", false));
       {
-        auto low = colorSpec("low_color", "primary");
-        add(std::move(low));
+        auto color1 = colorSpec("color_1", "primary");
+        add(std::move(color1));
       }
       {
-        auto high = colorSpec("high_color", "primary");
-        add(std::move(high));
+        auto color2 = colorSpec("color_2", "primary");
+        add(std::move(color2));
       }
     } else if (type == "battery") {
       add(selectSpec(

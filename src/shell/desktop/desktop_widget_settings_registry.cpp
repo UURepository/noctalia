@@ -165,8 +165,8 @@ namespace desktop_settings {
       add(boolSpec("mirrored", true));
       add(boolSpec("centered", true));
       add(boolSpec("show_when_idle", true));
-      add(colorSpec("low_color", "primary"));
-      add(colorSpec("high_color", "primary"));
+      add(colorSpec("color_1", "primary"));
+      add(colorSpec("color_2", "primary"));
     } else if (type == "fancy_audio_visualizer") {
       const WidgetSettingVisibility barsVisible{"visualization_mode", {"bars", "bars_rings", "all"}};
       const WidgetSettingVisibility waveVisible{"visualization_mode", {"wave", "wave_rings", "all"}};

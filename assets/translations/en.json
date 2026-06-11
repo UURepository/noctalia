@@ -337,14 +337,14 @@
         "font-family-default": "System default",
         "format": "Format",
         "hide-when-no-media": "Hide When No Media",
-        "high-color": "High Color",
+        "color-1": "Color One",
+        "color-2": "Color Two",
         "horizontal": "Horizontal",
         "image-path": "Image",
         "inner-diameter": "Inner Diameter",
         "input-opacity": "Input Opacity",
         "input-radius": "Input Radius",
         "layout": "Layout",
-        "low-color": "Low Color",
         "mirrored": "Mirrored",
         "opacity": "Opacity",
         "primary-color": "Primary Color",
@@ -2472,9 +2472,13 @@
           "description": "Show placeholder text when no window is focused instead of hiding the widget",
           "label": "Show Empty Label"
         },
-        "high-color": {
-          "description": "Color used for high visualizer values",
-          "label": "High Color"
+        "color-1": {
+          "description": "First gradient color in the visualizer",
+          "label": "Color One"
+        },
+        "color-2": {
+          "description": "Second gradient color in the visualizer",
+          "label": "Color Two"
         },
         "highlight-color": {
           "description": "Color reached at or above the critical threshold",
@@ -2512,10 +2516,6 @@
         "length": {
           "description": "Spacer length in pixels",
           "label": "Length"
-        },
-        "low-color": {
-          "description": "Color used for low visualizer values",
-          "label": "Low Color"
         },
         "match-adjacent-spacing": {
           "description": "Widen gaps between inline tray icons to match the visual spacing of neighboring bar widgets (includes capsule padding)",

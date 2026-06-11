@@ -159,14 +159,14 @@ std::unique_ptr<Widget> WidgetFactory::create(
     const bool mirrored = wc != nullptr ? wc->getBool("mirrored", true) : true;
     const bool centered = wc != nullptr ? wc->getBool("centered", true) : true;
     const bool showWhenIdle = wc != nullptr ? wc->getBool("show_when_idle", false) : false;
-    const ColorSpec lowColor = wc != nullptr
-        ? wc->getColorSpec("low_color", colorSpecFromRole(ColorRole::Primary), "widget." + name + ".low_color")
+    const ColorSpec color1 = wc != nullptr
+        ? wc->getColorSpec("color_1", colorSpecFromRole(ColorRole::Primary), "widget." + name + ".color_1")
         : colorSpecFromRole(ColorRole::Primary);
-    const ColorSpec highColor = wc != nullptr
-        ? wc->getColorSpec("high_color", colorSpecFromRole(ColorRole::Primary), "widget." + name + ".high_color")
+    const ColorSpec color2 = wc != nullptr
+        ? wc->getColorSpec("color_2", colorSpecFromRole(ColorRole::Primary), "widget." + name + ".color_2")
         : colorSpecFromRole(ColorRole::Primary);
     auto widget = std::make_unique<AudioVisualizerWidget>(
-        m_audioSpectrum, width, bands, mirrored, lowColor, highColor, centered, showWhenIdle
+        m_audioSpectrum, width, bands, mirrored, color1, color2, centered, showWhenIdle
     );
     widget->setContentScale(contentScale);
     return widget;

@@ -420,8 +420,8 @@ void RenderContext::renderNode(
   case NodeType::AudioSpectrum: {
     const auto* spectrum = static_cast<const AudioSpectrumNode*>(node);
     auto style = spectrum->style();
-    style.lowColor.a *= effectiveOpacity;
-    style.highColor.a *= effectiveOpacity;
+    style.color1.a *= effectiveOpacity;
+    style.color2.a *= effectiveOpacity;
     const float pixelScaleX = sw > 0.0f ? bw / sw : 1.0f;
     const float pixelScaleY = sh > 0.0f ? bh / sh : 1.0f;
     m_backend->drawAudioSpectrum(
