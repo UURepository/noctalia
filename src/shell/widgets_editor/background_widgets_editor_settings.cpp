@@ -100,12 +100,26 @@ namespace {
     if (!spec.visibleWhen.has_value()) {
       return true;
     }
-    for (const auto& cond : spec.visibleWhen->any) {
-      const auto current = settingValueAsString(s, cond.key, allSpecs);
-      for (const auto& val : cond.values) {
+    auto matches = [&](const std::string& key, const std::vector<std::string>& values) {
+      const auto current = settingValueAsString(s, key, allSpecs);
+      for (const auto& val : values) {
         if (val == current) {
           return true;
         }
+      }
+      return false;
+    };
+    for (const auto& cond : spec.visibleWhen->all) {
+      if (!matches(cond.key, cond.values)) {
+        return false;
+      }
+    }
+    if (spec.visibleWhen->any.empty()) {
+      return true;
+    }
+    for (const auto& cond : spec.visibleWhen->any) {
+      if (matches(cond.key, cond.values)) {
+        return true;
       }
     }
     return false;
@@ -118,6 +132,30 @@ namespace {
       }
     }
     return false;
+  }
+
+  bool settingChangeAffectsInspectorVisibility(std::string_view type, std::string_view changedKey) {
+    auto checkSpecs = [&](const std::vector<settings::WidgetSettingSpec>& specs) {
+      for (const auto& spec : specs) {
+        if (!spec.visibleWhen.has_value()) {
+          continue;
+        }
+        for (const auto& cond : spec.visibleWhen->any) {
+          if (cond.key == changedKey) {
+            return true;
+          }
+        }
+        for (const auto& cond : spec.visibleWhen->all) {
+          if (cond.key == changedKey) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    return checkSpecs(desktop_settings::desktopWidgetSettingSpecs(type))
+        || checkSpecs(desktop_settings::commonDesktopWidgetSettingSpecs(type));
   }
 
   std::unique_ptr<Flex> makeRow(std::string_view labelText, std::unique_ptr<Node> control) {
@@ -573,12 +611,18 @@ void BackgroundWidgetsEditor::applySettingChange(const std::string& key, WidgetS
       return;
     }
 
+    const bool rebuildInspector = settingChangeAffectsInspectorVisibility(state->type, key) || key == "background";
+
     if (view.widget != nullptr && view.widget->applySetting(key, value, state->settings, *m_renderContext)) {
       view.intrinsicWidth = std::max(1.0f, view.widget->intrinsicWidth());
       view.intrinsicHeight = std::max(1.0f, view.widget->intrinsicHeight());
       applyViewState(view, *state, false);
       updateSelectionVisuals(*surface);
-      surface->surface->requestRedraw();
+      if (rebuildInspector) {
+        requestLayout();
+      } else if (surface->surface != nullptr) {
+        surface->surface->requestRedraw();
+      }
       return;
     }
 
@@ -635,9 +679,10 @@ void BackgroundWidgetsEditor::applySettingChange(const std::string& key, WidgetS
       surface->surface->requestFrameTick();
     }
     updateSelectionVisuals(*surface);
-    surface->surface->requestRedraw();
-    if (key == "background") {
+    if (rebuildInspector) {
       requestLayout();
+    } else if (surface->surface != nullptr) {
+      surface->surface->requestRedraw();
     }
   });
 }
