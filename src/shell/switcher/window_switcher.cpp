@@ -197,6 +197,31 @@ namespace {
     return std::string(windowId);
   }
 
+  void activateWindowSwitcherEntry(CompositorPlatform& platform, const WindowSwitcherEntry& entry) {
+    if (compositors::isHyprland() && !entry.windowId.empty()) {
+      if (!compositors::hyprland::normalizeWindowId(entry.windowId).empty()) {
+        platform.focusCompositorWindow(entry.windowId);
+        return;
+      }
+    }
+    if (entry.closeHandle != 0) {
+      auto* handle = reinterpret_cast<zwlr_foreign_toplevel_handle_v1*>(entry.closeHandle);
+      if (platform.containsWlrToplevelHandle(handle)) {
+        platform.activateToplevel(handle);
+        return;
+      }
+    }
+    if (entry.windowId.empty()) {
+      return;
+    }
+    if (zwlr_foreign_toplevel_handle_v1* handle = platform.toplevelHandleForCompositorWindowId(entry.windowId);
+        handle != nullptr && platform.containsWlrToplevelHandle(handle)) {
+      platform.activateToplevel(handle);
+      return;
+    }
+    platform.focusCompositorWindow(entry.windowId);
+  }
+
   [[nodiscard]] std::string identityKeyForEntry(const WindowSwitcherEntry& entry) {
     const std::string canonical = canonicalWindowId(entry.windowId);
     if (!canonical.empty()) {
@@ -688,11 +713,7 @@ void WindowSwitcher::activateSelected() {
   if (m_platform == nullptr || m_windows.empty() || m_selectedIndex >= m_windows.size()) {
     return;
   }
-  const std::string& windowId = m_windows[m_selectedIndex].windowId;
-  if (windowId.empty()) {
-    return;
-  }
-  m_platform->focusCompositorWindow(windowId);
+  activateWindowSwitcherEntry(*m_platform, m_windows[m_selectedIndex]);
 }
 
 void WindowSwitcher::closeWindowAt(std::size_t index) {
