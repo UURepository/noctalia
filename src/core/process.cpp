@@ -217,7 +217,7 @@ namespace {
   }
 
   [[nodiscard]] std::vector<std::string> cachedProcessCommandLines() {
-    std::lock_guard lock(processCommandLineCacheMutex());
+    std::scoped_lock lock(processCommandLineCacheMutex());
     auto& cache = processCommandLineCache();
     const auto now = std::chrono::steady_clock::now();
     if (cache.capturedAt.time_since_epoch().count() == 0 || now - cache.capturedAt >= kProcessCommandLineCacheTtl) {
