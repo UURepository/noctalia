@@ -78,7 +78,7 @@ _clang_tidy m=mode *args:
     run-clang-tidy -quiet -p build-{{m}} -j "$(nproc)" -header-filter="^${src_root}/.*" {{args}} "^${src_root}/.*"
 
 lint m=mode: (configure m)
-    just _clang_tidy {{m}}
+    just _clang_tidy {{m}} '-warnings-as-errors=*'
 
 fix m=mode: (configure m)
     just _clang_tidy {{m}} -fix
