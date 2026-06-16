@@ -121,6 +121,9 @@ void DesktopWidgetsController::initialize(
   m_editor->setExitRequestedCallback([this]() { exitEdit(); });
   loadSnapshotFromConfig();
   m_initialized = true;
+  if (m_config != nullptr) {
+    m_lastEnabled = m_config->config().desktopWidgets.enabled;
+  }
   applyVisibility();
 
   if (m_config != nullptr) {
@@ -413,6 +416,16 @@ void DesktopWidgetsController::applyVisibility() {
 void DesktopWidgetsController::handleConfigReload() {
   if (!m_initialized) {
     return;
+  }
+
+  // An explicit change to the saved enable toggle cancels any IPC runtime override, so the settings
+  // UI takes back control. Gated on an actual transition: unrelated reloads leave the override intact.
+  if (m_config != nullptr) {
+    const bool enabled = m_config->config().desktopWidgets.enabled;
+    if (enabled != m_lastEnabled) {
+      m_lastEnabled = enabled;
+      m_runtimeVisibility = RuntimeVisibility::FollowConfig;
+    }
   }
 
   if (!isEditing()) {

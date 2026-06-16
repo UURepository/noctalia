@@ -90,6 +90,8 @@ private:
   bool m_initialized = false;
   bool m_displaySuppressed = false;
   RuntimeVisibility m_runtimeVisibility = RuntimeVisibility::FollowConfig;
+  // Last-seen saved desktop_widgets.enabled; an explicit transition clears the runtime override.
+  bool m_lastEnabled = false;
   bool m_sessionLockPaused = false;
   std::unique_ptr<DesktopWidgetsHost> m_host;
   std::unique_ptr<BackgroundWidgetsEditor> m_editor;
