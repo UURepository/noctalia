@@ -42,4 +42,4 @@ jobs:
         run: |
           git remote add codeberg git@codeberg.org:noctalia-dev/noctalia.git
           branches=$(git for-each-ref --format='%(refname):refs/heads/%(refname:strip=3)' refs/remotes/origin | grep -v '/HEAD:refs/heads/')
-          git push codeberg --prune ${branches} '+refs/tags/*:refs/tags/*'
+          git push codeberg --force --prune ${branches} '+refs/tags/*:refs/tags/*'
