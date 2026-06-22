@@ -5,13 +5,13 @@
 #include "shell/bar/bar.h"
 #include "shell/desktop/desktop_widget_layout.h"
 #include "shell/desktop/desktop_widgets_controller.h"
+#include "shell/desktop/editor/desktop_widgets_editor.h"
+#include "shell/desktop/editor/desktop_widgets_editor_types.h"
 #include "shell/dock/dock.h"
 #include "shell/lockscreen/lock_screen.h"
 #include "shell/lockscreen/lock_surface.h"
 #include "shell/lockscreen/lockscreen_login_box.h"
 #include "shell/lockscreen/lockscreen_widgets_host.h"
-#include "shell/widgets_editor/background_widgets_editor.h"
-#include "shell/widgets_editor/background_widgets_editor_config.h"
 #include "wayland/wayland_connection.h"
 
 #include <algorithm>
@@ -106,7 +106,7 @@ void LockscreenWidgetsController::initialize(const LockscreenWidgetsControllerSe
   m_renderContext = services.widgets.renderContext;
   m_host = std::make_unique<LockscreenWidgetsHost>();
   m_host->initialize(services.widgets);
-  m_editor = std::make_unique<BackgroundWidgetsEditor>(BackgroundWidgetsEditorProfile::lockscreen());
+  m_editor = std::make_unique<DesktopWidgetsEditor>(DesktopWidgetsEditorProfile::lockscreen());
   m_editor->initialize(services.widgets);
   m_editor->setExitRequestedCallback([this]() { exitEdit(); });
   loadSnapshotFromConfig();
@@ -230,7 +230,7 @@ void LockscreenWidgetsController::enterEdit() {
   if (m_dock != nullptr) {
     m_dock->suppressDisplay();
   }
-  m_editor->open(toWidgetsEditorSnapshot(m_snapshot));
+  m_editor->open(toDesktopWidgetsEditorSnapshot(m_snapshot));
   m_host->hide();
 }
 
@@ -239,7 +239,7 @@ void LockscreenWidgetsController::exitEdit() {
     return;
   }
 
-  m_snapshot = fromWidgetsEditorSnapshot(m_editor->snapshot());
+  m_snapshot = fromDesktopWidgetsEditorSnapshot(m_editor->snapshot());
   normalizeSnapshot();
   applyVisibility();
   (void)m_editor->close();
@@ -321,7 +321,7 @@ void LockscreenWidgetsController::applyVisibility() {
 
   if (!m_config->isLockScreenEnabled()) {
     if (isEditing() && m_editor != nullptr) {
-      m_snapshot = fromWidgetsEditorSnapshot(m_editor->close());
+      m_snapshot = fromDesktopWidgetsEditorSnapshot(m_editor->close());
       saveSnapshotToConfig();
     }
     m_host->hide();
@@ -331,7 +331,7 @@ void LockscreenWidgetsController::applyVisibility() {
   const bool enabled = m_config->config().lockscreenWidgets.enabled;
   if (!enabled) {
     if (isEditing() && m_editor != nullptr) {
-      m_snapshot = fromWidgetsEditorSnapshot(m_editor->close());
+      m_snapshot = fromDesktopWidgetsEditorSnapshot(m_editor->close());
       saveSnapshotToConfig();
     }
     m_host->hide();

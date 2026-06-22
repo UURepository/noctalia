@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <memory>
 
-class BackgroundWidgetsEditor;
+class DesktopWidgetsEditor;
 class DesktopWidgetsHost;
 class HttpClient;
 class LockscreenWidgetsController;
@@ -90,5 +90,5 @@ private:
   // Last-seen saved desktop_widgets.enabled; an explicit transition clears the runtime override.
   bool m_lastEnabled = false;
   std::unique_ptr<DesktopWidgetsHost> m_host;
-  std::unique_ptr<BackgroundWidgetsEditor> m_editor;
+  std::unique_ptr<DesktopWidgetsEditor> m_editor;
 };

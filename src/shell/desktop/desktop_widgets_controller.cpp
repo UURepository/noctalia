@@ -4,9 +4,9 @@
 #include "pipewire/pipewire_spectrum.h"
 #include "shell/desktop/desktop_widget_layout.h"
 #include "shell/desktop/desktop_widgets_host.h"
+#include "shell/desktop/editor/desktop_widgets_editor.h"
+#include "shell/desktop/editor/desktop_widgets_editor_types.h"
 #include "shell/lockscreen/lockscreen_widgets_controller.h"
-#include "shell/widgets_editor/background_widgets_editor.h"
-#include "shell/widgets_editor/background_widgets_editor_config.h"
 #include "wayland/wayland_connection.h"
 
 #include <algorithm>
@@ -96,7 +96,7 @@ void DesktopWidgetsController::initialize(const DesktopWidgetsControllerServices
   m_renderContext = services.widgets.renderContext;
   m_host = std::make_unique<DesktopWidgetsHost>();
   m_host->initialize(services.widgets);
-  m_editor = std::make_unique<BackgroundWidgetsEditor>(BackgroundWidgetsEditorProfile::desktop());
+  m_editor = std::make_unique<DesktopWidgetsEditor>(DesktopWidgetsEditorProfile::desktop());
   m_editor->initialize(services.widgets);
   m_editor->setExitRequestedCallback([this]() { exitEdit(); });
   loadSnapshotFromConfig();
