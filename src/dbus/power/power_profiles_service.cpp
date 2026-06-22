@@ -47,7 +47,7 @@ namespace {
           continue;
         }
         try {
-          const std::string profile = it->second.get<std::string>();
+          const auto profile = it->second.get<std::string>();
           if (!profile.empty()) {
             profiles.push_back(profile);
           }
@@ -89,7 +89,7 @@ namespace {
   }
 
   bool isTimeoutError(const sdbus::Error& error) {
-    const auto name = error.getName();
+    const auto& name = error.getName();
     return (
         name == sdbus::Error::Name{"org.freedesktop.DBus.Error.NoReply"}
         || name == sdbus::Error::Name{"org.freedesktop.DBus.Error.Timeout"}

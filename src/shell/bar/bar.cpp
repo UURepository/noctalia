@@ -261,14 +261,14 @@ namespace {
     const bool aBottom = (anchor & LayerShellAnchor::Bottom) != 0;
     const bool aLeft = (anchor & LayerShellAnchor::Left) != 0;
     const bool aRight = (anchor & LayerShellAnchor::Right) != 0;
-    const float mTop = static_cast<float>(surface->marginTop());
-    const float mRight = static_cast<float>(surface->marginRight());
-    const float mBottom = static_cast<float>(surface->marginBottom());
-    const float mLeft = static_cast<float>(surface->marginLeft());
-    const float surfW = static_cast<float>(surface->width());
-    const float surfH = static_cast<float>(surface->height());
-    const float outputW = static_cast<float>(outputInfo.logicalWidth);
-    const float outputH = static_cast<float>(outputInfo.logicalHeight);
+    const auto mTop = static_cast<float>(surface->marginTop());
+    const auto mRight = static_cast<float>(surface->marginRight());
+    const auto mBottom = static_cast<float>(surface->marginBottom());
+    const auto mLeft = static_cast<float>(surface->marginLeft());
+    const auto surfW = static_cast<float>(surface->width());
+    const auto surfH = static_cast<float>(surface->height());
+    const auto outputW = static_cast<float>(outputInfo.logicalWidth);
+    const auto outputH = static_cast<float>(outputInfo.logicalHeight);
 
     float x = 0.0f;
     float y = 0.0f;
@@ -511,7 +511,7 @@ namespace {
     const auto base = computeBarSurfaceSpec(cfg, shadow);
     const bool isVertical = (cfg.position == "left" || cfg.position == "right");
     const float current = isVertical ? surfaceWidth : surfaceHeight;
-    const float normal = static_cast<float>(isVertical ? base.surfaceWidth : base.surfaceHeight);
+    const auto normal = static_cast<float>(isVertical ? base.surfaceWidth : base.surfaceHeight);
     return std::max(0.0f, current - normal);
   }
 
@@ -570,17 +570,17 @@ namespace {
       const BarConfig& cfg, const ShellConfig::ShadowConfig& shadow, float surfaceWidth, float surfaceHeight,
       float innerSurfaceExtension = 0.0f
   ) {
-    const float barThickness = static_cast<float>(cfg.thickness);
-    const float marginEnds = static_cast<float>(cfg.marginEnds);
-    const float marginEdge = static_cast<float>(cfg.marginEdge);
+    const auto barThickness = static_cast<float>(cfg.thickness);
+    const auto marginEnds = static_cast<float>(cfg.marginEnds);
+    const auto marginEdge = static_cast<float>(cfg.marginEdge);
     const bool isBottom = cfg.position == "bottom";
     const bool isRight = cfg.position == "right";
     const bool isVertical = (cfg.position == "left" || cfg.position == "right");
     const auto sbi = shell::surface_shadow::bleed(cfg.shadow, shadow);
-    const float bleedLeft = static_cast<float>(sbi.left);
-    const float bleedRight = static_cast<float>(sbi.right);
-    const float bleedUp = static_cast<float>(sbi.up);
-    const float bleedDown = static_cast<float>(sbi.down);
+    const auto bleedLeft = static_cast<float>(sbi.left);
+    const auto bleedRight = static_cast<float>(sbi.right);
+    const auto bleedUp = static_cast<float>(sbi.up);
+    const auto bleedDown = static_cast<float>(sbi.down);
     // For bottom/right bars the inner edge is the origin side, so the concave spike
     // pushes the body inward by its bulge. Top/left bars grow away from the origin
     // and need no body shift. Gutter (auto-hide) placements derive from the surface
@@ -1428,8 +1428,8 @@ std::vector<InputRect> Bar::surfaceRectsForOutput(wl_output* output) const {
     const std::int32_t mLeft = surface->marginLeft();
     // surface->width()/height() may be 0 before configure; fall back to BarConfig
     // thickness so we still publish a sensible exclusion for fresh surfaces.
-    const std::int32_t surfW = static_cast<std::int32_t>(surface->width());
-    const std::int32_t surfH = static_cast<std::int32_t>(surface->height());
+    const auto surfW = static_cast<std::int32_t>(surface->width());
+    const auto surfH = static_cast<std::int32_t>(surface->height());
 
     std::int32_t rectW = surfW;
     std::int32_t rectH = surfH;
@@ -1730,7 +1730,7 @@ void Bar::destroyInstance(std::uint32_t outputName) {
 
 void Bar::populateWidgets(BarInstance& instance) {
   const auto& widgetConfigs = m_config->config().widgets;
-  const FontWeight labelFontWeight = static_cast<FontWeight>(instance.barConfig.fontWeight);
+  const auto labelFontWeight = static_cast<FontWeight>(instance.barConfig.fontWeight);
   const std::string barFontFamily = (instance.barConfig.fontFamily && !instance.barConfig.fontFamily->empty())
       ? *instance.barConfig.fontFamily
       : m_config->config().shell.fontFamily;
@@ -1764,16 +1764,16 @@ void Bar::populateWidgets(BarInstance& instance) {
     if (wcPtr != nullptr && wcPtr->hasSetting("color")) {
       widget->setWidgetForeground(wcPtr->getOptionalColorSpec("color", "widget." + name + ".color"));
     } else if (groupForeground != nullptr && groupForeground->has_value()) {
-      widget->setWidgetForeground(**groupForeground);
+      widget->setWidgetForeground(*groupForeground);
     } else if (instance.barConfig.widgetColor.has_value()) {
-      widget->setWidgetForeground(*instance.barConfig.widgetColor);
+      widget->setWidgetForeground(instance.barConfig.widgetColor);
     }
     if (wcPtr != nullptr && wcPtr->hasSetting("icon_color")) {
       widget->setWidgetIconColor(wcPtr->getOptionalColorSpec("icon_color", "widget." + name + ".icon_color"));
     } else if (groupForeground != nullptr && groupForeground->has_value()) {
-      widget->setWidgetIconColor(**groupForeground);
+      widget->setWidgetIconColor(*groupForeground);
     } else if (instance.barConfig.widgetIconColor.has_value()) {
-      widget->setWidgetIconColor(*instance.barConfig.widgetIconColor);
+      widget->setWidgetIconColor(instance.barConfig.widgetIconColor);
     }
     dest.push_back(std::move(widget));
   };
@@ -1818,7 +1818,7 @@ void Bar::populateWidgets(BarInstance& instance) {
 
 void Bar::attachWidgetsToSections(BarInstance& instance) {
   const bool isVertical = instance.barConfig.position == "left" || instance.barConfig.position == "right";
-  const float widgetSpacing = static_cast<float>(instance.barConfig.widgetSpacing);
+  const auto widgetSpacing = static_cast<float>(instance.barConfig.widgetSpacing);
 
   auto attach = [&](std::vector<std::unique_ptr<Widget>>& widgets, std::vector<BarCapsuleRun>& capsuleRuns,
                     Flex* section) {
@@ -2073,7 +2073,7 @@ void Bar::rebuildInstanceContents(BarInstance& instance, const BarConfig& newCon
 
   // Refresh section-level layout knobs that may have changed (gap; direction
   // doesn't change because position is part of the surface-fields gate).
-  const float widgetSpacing = static_cast<float>(instance.barConfig.widgetSpacing);
+  const auto widgetSpacing = static_cast<float>(instance.barConfig.widgetSpacing);
   if (instance.startSection != nullptr) {
     instance.startSection->setGap(widgetSpacing);
   }
@@ -2273,15 +2273,15 @@ void Bar::buildScene(BarInstance& instance, std::uint32_t width, std::uint32_t h
 
   const auto w = static_cast<float>(width);
   const auto h = static_cast<float>(height);
-  const float padding = static_cast<float>(instance.barConfig.padding);
-  const float widgetSpacing = static_cast<float>(instance.barConfig.widgetSpacing);
+  const auto padding = static_cast<float>(instance.barConfig.padding);
+  const auto widgetSpacing = static_cast<float>(instance.barConfig.widgetSpacing);
   const auto& shadowConfig = m_config->config().shell.shadow;
   const auto shadowOffset = shadowDirectionOffset(shadowConfig.direction);
   const float shadowSize = shell::surface_shadow::enabled(instance.barConfig.shadow, shadowConfig)
       ? static_cast<float>(shell::surface_shadow::kBlurRadius)
       : 0.0f;
-  const float shadowOffsetX = static_cast<float>(shadowOffset.x);
-  const float shadowOffsetY = static_cast<float>(shadowOffset.y);
+  const auto shadowOffsetX = static_cast<float>(shadowOffset.x);
+  const auto shadowOffsetY = static_cast<float>(shadowOffset.y);
   const bool isBottom = instance.barConfig.position == "bottom";
   const bool isRight = instance.barConfig.position == "right";
   const bool isVertical = (instance.barConfig.position == "left" || instance.barConfig.position == "right");
@@ -2460,7 +2460,7 @@ void Bar::updateWidgets(BarInstance& instance) {
 
   const auto w = static_cast<float>(instance.surface->width());
   const auto h = static_cast<float>(instance.surface->height());
-  const float padding = static_cast<float>(instance.barConfig.padding);
+  const auto padding = static_cast<float>(instance.barConfig.padding);
   const bool isVertical = (instance.barConfig.position == "left" || instance.barConfig.position == "right");
   const auto& shadowConfig = m_config->config().shell.shadow;
   const float innerSurfaceExtension = barInnerSurfaceExtension(instance.barConfig, shadowConfig, w, h);
@@ -2503,7 +2503,7 @@ void Bar::prepareFrame(BarInstance& instance, bool needsUpdate, bool needsLayout
 
   const auto w = static_cast<float>(instance.surface->width());
   const auto h = static_cast<float>(instance.surface->height());
-  const float padding = static_cast<float>(instance.barConfig.padding);
+  const auto padding = static_cast<float>(instance.barConfig.padding);
   const bool isVertical = (instance.barConfig.position == "left" || instance.barConfig.position == "right");
   const auto& shadowConfig = m_config->config().shell.shadow;
   const float innerSurfaceExtension = barInnerSurfaceExtension(instance.barConfig, shadowConfig, w, h);
@@ -2594,8 +2594,8 @@ bool Bar::onPointerEvent(const PointerEvent& event) {
     case PointerEvent::Type::Button:
     case PointerEvent::Type::Axis:
       if (event.type == PointerEvent::Type::Button && event.button == BTN_RIGHT && event.state == 1) {
-        const float sx = static_cast<float>(event.sx);
-        const float sy = static_cast<float>(event.sy);
+        const auto sx = static_cast<float>(event.sx);
+        const auto sy = static_cast<float>(event.sy);
         const auto& deadZone = targetInstance->barConfig.deadZone;
         if (!deadZone.rightCommand.empty() && isBarDeadZone(*targetInstance, sx, sy)) {
           executeDeadZoneCommand(deadZone.rightCommand);
@@ -2663,8 +2663,8 @@ bool Bar::onPointerEvent(const PointerEvent& event) {
       break;
     m_hoveredInstance->lastPointerSx = static_cast<float>(event.sx);
     m_hoveredInstance->lastPointerSy = static_cast<float>(event.sy);
-    const float sx = static_cast<float>(event.sx);
-    const float sy = static_cast<float>(event.sy);
+    const auto sx = static_cast<float>(event.sx);
+    const auto sy = static_cast<float>(event.sy);
     bool pressed = (event.state == 1); // WL_POINTER_BUTTON_STATE_PRESSED
     consumed = m_hoveredInstance->inputDispatcher.pointerButton(sx, sy, event.button, pressed);
     if (pressed && !consumed) {
@@ -2679,8 +2679,8 @@ bool Bar::onPointerEvent(const PointerEvent& event) {
       break;
     m_hoveredInstance->lastPointerSx = static_cast<float>(event.sx);
     m_hoveredInstance->lastPointerSy = static_cast<float>(event.sy);
-    const float sx = static_cast<float>(event.sx);
-    const float sy = static_cast<float>(event.sy);
+    const auto sx = static_cast<float>(event.sx);
+    const auto sy = static_cast<float>(event.sy);
     const bool axisConsumed = m_hoveredInstance->inputDispatcher.pointerAxis(
         sx, sy, event.axis, event.axisSource, event.axisValue, event.axisDiscrete, event.axisValue120, event.axisLines
     );
@@ -2947,7 +2947,7 @@ std::string Bar::setBarAutoHideIpc(std::string_view args) {
     return "error: usage: bar-auto-hide-set <on|off|true|false|1|0> [bar-name] [monitor-selector]\n";
   }
 
-  const std::string value = parts[0];
+  const std::string& value = parts[0];
   bool enabled = false;
   if (value == "on" || value == "true" || value == "1") {
     enabled = true;

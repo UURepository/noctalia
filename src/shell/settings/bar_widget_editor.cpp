@@ -729,6 +729,7 @@ namespace settings {
       }
 
       std::vector<std::pair<std::vector<std::string>, ConfigOverrideValue>> batch;
+      batch.reserve(laneEdits.size());
       for (const auto& edit : laneEdits) {
         batch.emplace_back(zones[edit.first].lanePath, edit.second);
       }
@@ -1689,7 +1690,7 @@ namespace settings {
           );
           hint->setFlexGrow(1.0f);
           groupRow->addChild(std::move(hint));
-          const std::string editGroupId = capsuleGroup;
+          const std::string& editGroupId = capsuleGroup;
           groupRow->addChild(
               ui::button({
                   .text = i18n::tr("settings.entities.widget.group.edit"),
@@ -2546,10 +2547,10 @@ namespace settings {
               if (dragState->highlightZoneIndex != *targetZone || dragState->highlightItemIndex != hoveredIdx) {
                 clearHighlight();
                 setCardCombineHighlight(*zones, *targetZone, hoveredIdx, true);
-                dragState->highlightZoneIndex = *targetZone;
+                dragState->highlightZoneIndex = targetZone;
                 dragState->highlightItemIndex = hoveredIdx;
               }
-              dragState->combineZoneIndex = *targetZone;
+              dragState->combineZoneIndex = targetZone;
               dragState->combineItemIndex = hoveredIdx;
               dragState->targetZoneIndex = std::nullopt;
               dragState->targetInsertionIndex = std::nullopt;
@@ -2570,7 +2571,7 @@ namespace settings {
           hideDropIndicators(*zones);
           return;
         }
-        dragState->targetZoneIndex = *targetZone;
+        dragState->targetZoneIndex = targetZone;
         dragState->targetInsertionIndex = insertion;
         hideDropIndicators(*zones);
         updateDropIndicator(*zone.indicator, *zone.container, *zone.itemNodes, insertion, scale);
@@ -2768,8 +2769,8 @@ namespace settings {
       }
       laneHeader->addChild(ui::spacer());
       if (inherited) {
-        auto items = laneItems;
-        auto path = lanePath;
+        const auto& items = laneItems;
+        const auto& path = lanePath;
         laneHeader->addChild(
             ui::button({
                 .text = i18n::tr("settings.entities.widget.lanes.customize"),

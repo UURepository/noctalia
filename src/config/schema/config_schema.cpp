@@ -643,7 +643,7 @@ namespace noctalia::config::schema {
           key,
           [member, key](const toml::table& tbl, Struct& out, std::string_view, Diagnostics&) {
             if (auto v = tbl[key].value<bool>()) {
-              out.*member = *v;
+              out.*member = v;
             }
           },
           [member, key](toml::table& tbl, const Struct& in) {
@@ -1759,7 +1759,7 @@ namespace noctalia::config::schema {
           key,
           [member, key, range](const toml::table& tbl, Struct& out, std::string_view, Diagnostics&) {
             if (auto v = finiteDouble(tbl[key])) {
-              float value = static_cast<float>(*v);
+              auto value = static_cast<float>(*v);
               if (range) {
                 value = applyRange(value, *range);
               }
