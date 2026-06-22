@@ -384,6 +384,7 @@ _noctalia_sources = files(
   'src/calendar/ical_parser.cpp',
   'src/config/atomic_file.cpp',
   'src/config/config_export.cpp',
+  'src/config/config_merge.cpp',
   'src/config/config_overrides.cpp',
   'src/config/config_service.cpp',
   'src/config/config_types.cpp',

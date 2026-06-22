@@ -1,4 +1,5 @@
 #include "config/atomic_file.h"
+#include "config/config_merge.h"
 #include "config/config_service.h"
 #include "config/widget_config.h"
 #include "core/key_chord.h"
@@ -667,24 +668,6 @@ namespace {
     return key == "start" || key == "center" || key == "end";
   }
 
-  std::vector<std::filesystem::path> sortedConfigTomlFiles(std::string_view configDir) {
-    std::vector<std::filesystem::path> files;
-    if (configDir.empty()) {
-      return files;
-    }
-
-    std::error_code ec;
-    if (!std::filesystem::is_directory(configDir, ec) || ec) {
-      return files;
-    }
-    for (const auto& entry : std::filesystem::directory_iterator(configDir, ec)) {
-      if (entry.is_regular_file() && entry.path().extension() == ".toml") {
-        files.push_back(entry.path());
-      }
-    }
-    std::ranges::sort(files);
-    return files;
-  }
 } // namespace
 
 ConfigChangeSet computeConfigChangeSet(const Config& prev, const Config& next) {
@@ -1082,21 +1065,14 @@ std::optional<Config> ConfigService::configForOverrides(const toml::table& overr
   Config parsed;
   noctalia::config::seedBuiltinWidgets(parsed);
 
-  const auto files = sortedConfigTomlFiles(m_configDir);
-  toml::table merged;
-  for (const auto& path : files) {
-    try {
-      auto tbl = toml::parse_file(path.string());
-      deepMerge(merged, tbl);
-    } catch (const toml::parse_error& e) {
-      kLog.warn(
-          "skipping parse error in effective override comparison {}: {}", path.filename().string(), e.description()
-      );
-    }
+  auto mergeResult = noctalia::config::mergeConfigWithIncludes(m_configDir);
+  toml::table merged = std::move(mergeResult.merged);
+  if (!mergeResult.firstError.empty()) {
+    kLog.warn("skipping config error in effective override comparison: {}", mergeResult.firstError);
   }
 
   deepMerge(merged, overrides);
-  if (files.empty() && overrides.empty()) {
+  if (mergeResult.loadedFiles.empty() && overrides.empty()) {
     parsed.idle.behaviors = defaultIdleBehaviors();
     parsed.bars.push_back(BarConfig{});
     parsed.controlCenter.shortcuts = defaultControlCenterShortcuts();
