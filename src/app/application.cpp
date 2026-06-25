@@ -909,14 +909,25 @@ void Application::initServices() {
 
   // Register all wallpaper consumers in the single-callback slot.
   m_configService.setWallpaperChangeCallback([this]() {
-    m_wallpaper.onStateChange();
+    const auto wallpaperChanges = m_wallpaper.onStateChange();
     m_backdrop.onStateChange();
     m_lockScreen.onWallpaperChanged();
     m_themeService.onWallpaperChange();
     if (m_panelManager.isOpenPanel("control-center")) {
       m_panelManager.refresh();
     }
-    m_hookManager.fire(HookKind::WallpaperChanged);
+    const auto fireWallpaperChangedHook = [this](const std::string& path, const std::string& connector) {
+      m_hookManager.fire(
+          HookKind::WallpaperChanged, {{"NOCTALIA_WALLPAPER_PATH", path}, {"NOCTALIA_WALLPAPER_CONNECTOR", connector}}
+      );
+    };
+    if (wallpaperChanges.empty()) {
+      fireWallpaperChangedHook(m_configService.getPaletteWallpaperPath(), {});
+    } else {
+      for (const auto& change : wallpaperChanges) {
+        fireWallpaperChangedHook(change.path, change.connector);
+      }
+    }
   });
 
   m_themeService.setChangeCallback([this]() {

@@ -519,10 +519,10 @@ void Wallpaper::onOutputChange() {
   }
 }
 
-void Wallpaper::onStateChange() {
+std::vector<WallpaperChange> Wallpaper::onStateChange() {
   kLog.info("state file changed, checking for updates");
 
-  bool changed = false;
+  std::vector<WallpaperChange> changes;
   for (auto& inst : m_instances) {
     auto newPath = m_config->getWallpaperPath(inst->connectorName);
     if (inst->surface == nullptr || inst->wallpaperNode == nullptr) {
@@ -531,7 +531,7 @@ void Wallpaper::onStateChange() {
 
     if (newPath.empty()) {
       if (!inst->currentPath.empty() || inst->currentTexture.id != 0 || inst->nextTexture.id != 0) {
-        changed = true;
+        changes.push_back({.path = newPath, .connector = inst->connectorName});
         if (inst->transitionAnimId != 0) {
           inst->animations.cancel(inst->transitionAnimId);
           inst->transitionAnimId = 0;
@@ -560,11 +560,11 @@ void Wallpaper::onStateChange() {
       case TransitionRedirect::AlreadyTargeting:
         continue;
       case TransitionRedirect::Redirected:
-        changed = true;
+        changes.push_back({.path = newPath, .connector = inst->connectorName});
         continue;
       case TransitionRedirect::Unrelated:
         inst->queuedPath = newPath;
-        changed = true;
+        changes.push_back({.path = newPath, .connector = inst->connectorName});
         continue;
       }
 
@@ -577,15 +577,16 @@ void Wallpaper::onStateChange() {
 
     kLog.info("changing {} → {}", inst->connectorName, newPath);
     loadWallpaper(*inst, newPath);
-    changed = true;
+    changes.push_back({.path = newPath, .connector = inst->connectorName});
   }
 
   // Any wallpaper change (manual selection, IPC, or automation) restarts the
   // rotation interval so the next automatic switch is a full interval away.
-  if (changed) {
+  if (!changes.empty()) {
     using namespace std::chrono;
     m_lastAutomationSwitchSecond = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
   }
+  return changes;
 }
 
 void Wallpaper::onSecondTick() {

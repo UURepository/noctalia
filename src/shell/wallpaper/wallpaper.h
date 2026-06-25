@@ -22,6 +22,11 @@ struct PointerEvent;
 struct WaylandOutput;
 struct wl_surface;
 
+struct WallpaperChange {
+  std::string path;
+  std::string connector;
+};
+
 class Wallpaper {
 public:
   Wallpaper();
@@ -35,7 +40,7 @@ public:
   // its Background surface is torn down so the external surface shows through. Runtime-only
   // (not persisted) — it clears on restart and is re-asserted by the owner.
   void setOutputExternallyManaged(const std::string& connector, bool managed);
-  void onStateChange();
+  [[nodiscard]] std::vector<WallpaperChange> onStateChange();
   void onSecondTick();
   void onGpuResourcesInvalidated();
   void registerIpc(IpcService& ipc);
