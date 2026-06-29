@@ -43,9 +43,7 @@ bool WorkspaceAlertService::contains(std::string_view token) const {
 
 bool WorkspaceAlertService::empty() const noexcept { return m_alerts.empty(); }
 
-std::vector<std::string> WorkspaceAlertService::tokens() const {
-  return {m_alerts.begin(), m_alerts.end()};
-}
+std::vector<std::string> WorkspaceAlertService::tokens() const { return {m_alerts.begin(), m_alerts.end()}; }
 
 bool WorkspaceAlertService::isAlerted(const Workspace& workspace) const {
   return (!workspace.id.empty() && m_alerts.contains(workspace.id))
@@ -87,9 +85,7 @@ std::size_t WorkspaceAlertService::clearActive(const std::vector<Workspace>& wor
   return cleared;
 }
 
-bool WorkspaceAlertService::isKnownWorkspaceToken(
-    std::string_view token, const std::vector<Workspace>& workspaces
-) {
+bool WorkspaceAlertService::isKnownWorkspaceToken(std::string_view token, const std::vector<Workspace>& workspaces) {
   if (token.empty()) {
     return false;
   }

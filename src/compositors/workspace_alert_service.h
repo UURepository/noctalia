@@ -34,12 +34,9 @@ public:
   void applyOverlay(std::vector<Workspace>& workspaces) const;
   [[nodiscard]] std::size_t clearActive(const std::vector<Workspace>& workspaces);
 
-  [[nodiscard]] static bool isKnownWorkspaceToken(
-      std::string_view token, const std::vector<Workspace>& workspaces
-  );
-  [[nodiscard]] static std::optional<std::string> workspaceTokenForWindow(
-      std::string_view windowId, const std::vector<WorkspaceWindowAssignment>& assignments
-  );
+  [[nodiscard]] static bool isKnownWorkspaceToken(std::string_view token, const std::vector<Workspace>& workspaces);
+  [[nodiscard]] static std::optional<std::string>
+  workspaceTokenForWindow(std::string_view windowId, const std::vector<WorkspaceWindowAssignment>& assignments);
 
 private:
   [[nodiscard]] bool isAlerted(const Workspace& workspace) const;
