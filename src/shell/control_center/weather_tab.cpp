@@ -341,6 +341,7 @@ std::unique_ptr<Flex> WeatherTab::create() {
             .text = i18n::tr("control-center.weather.forecast-placeholder.temperature"),
             .fontSize = Style::fontSizeBody * scale,
             .color = colorSpecFromRole(ColorRole::OnSurface),
+            .maxLines = 1,
             .textAlign = TextAlign::End,
         })
     );
@@ -494,6 +495,10 @@ void WeatherTab::doLayout(Renderer& renderer, float contentWidth, float bodyHeig
     if (m_forecastRows[i] == nullptr || !m_forecastRows[i]->visible()) {
       continue;
     }
+    // Stretch the row to the column's inner width so the topRow's SpaceBetween
+    // pins every temperature to a common right edge instead of letting each row
+    // size to its own content (which lets a wide row run past the panel edge).
+    m_forecastRows[i]->setMinWidth(forecastInnerWidth);
     if (m_forecastTemps[i] != nullptr) {
       m_forecastTemps[i]->setMinWidth(forecastTempColumnWidth);
     }

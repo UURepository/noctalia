@@ -48,6 +48,7 @@ Select::Select() {
   m_triggerPreview = static_cast<ColorSwatchPreviewStrip*>(addChild(std::move(triggerPreview)));
 
   auto triggerLabel = std::make_unique<Label>();
+  triggerLabel->setMaxLines(1);
   m_triggerLabel = static_cast<Label*>(addChild(std::move(triggerLabel)));
 
   auto triggerGlyph = std::make_unique<Glyph>();

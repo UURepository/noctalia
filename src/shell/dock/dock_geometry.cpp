@@ -241,13 +241,16 @@ namespace shell::dock {
   computeInputRegion(const DockConfig& cfg, const DockPanelGeometry& panel, int surfaceW, int surfaceH, bool hidden) {
     if (hidden) {
       const DockEdge edge = cfg.position;
-      if (!isVerticalEdge(edge)) {
+      if (edge == DockEdge::Bottom) {
         return {InputRect{0, surfaceH - kAutoHideTriggerPx, surfaceW, kAutoHideTriggerPx}};
       }
       if (edge == DockEdge::Left) {
+        return {InputRect{0, 0, kAutoHideTriggerPx, surfaceH}};
+      }
+      if (edge == DockEdge::Right) {
         return {InputRect{surfaceW - kAutoHideTriggerPx, 0, kAutoHideTriggerPx, surfaceH}};
       }
-      return {InputRect{0, 0, kAutoHideTriggerPx, surfaceH}};
+      return {InputRect{0, 0, surfaceW, kAutoHideTriggerPx}};
     }
 
     return {InputRect{
