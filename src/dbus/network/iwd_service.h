@@ -45,7 +45,9 @@ public:
   [[nodiscard]] bool hasSavedConnection(const std::string& ssid) const override;
 
 private:
-  void subscribeObject(const std::string& path, const std::map<std::string, std::map<std::string, sdbus::Variant>>& interfaces);
+  void subscribeObject(
+      const std::string& path, const std::map<std::string, std::map<std::string, sdbus::Variant>>& interfaces
+  );
   void emitChangedIfNeeded(NetworkState next);
 
   SystemBus& m_bus;
@@ -53,8 +55,10 @@ private:
   NetworkState m_state;
   std::vector<AccessPointInfo> m_accessPoints;
   const std::vector<VpnConnectionInfo> m_vpnConnections; // always empty
-  std::unordered_map<std::string, std::string> m_knownNetworks; // ssid -> known network object path
-  std::unordered_map<std::string, std::string> m_deviceNames;   // station path -> device name
+  // ssid -> known network object path.
+  std::unordered_map<std::string, std::string> m_knownNetworks;
+  // station path -> device name.
+  std::unordered_map<std::string, std::string> m_deviceNames;
   std::unordered_map<std::string, std::unique_ptr<sdbus::IProxy>> m_objectProxies;
   bool m_hasStateSnapshot = false;
   bool m_refreshInFlight = false;

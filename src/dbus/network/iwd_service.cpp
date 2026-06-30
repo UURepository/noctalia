@@ -116,7 +116,9 @@ void IwdService::subscribeObject(const std::string& path, const ObjectInterfaces
   if (m_objectProxies.contains(path)) {
     return;
   }
-  if (!interfaces.contains(kDeviceInterface) && !interfaces.contains(kStationInterface) && !interfaces.contains(kNetworkInterface)
+  if (!interfaces.contains(kDeviceInterface)
+      && !interfaces.contains(kStationInterface)
+      && !interfaces.contains(kNetworkInterface)
       && !interfaces.contains(kKnownNetworkInterface)) {
     return;
   }
@@ -126,7 +128,9 @@ void IwdService::subscribeObject(const std::string& path, const ObjectInterfaces
     proxy->uponSignal("PropertiesChanged")
         .onInterface(kPropertiesInterface)
         .call([this](const std::string& interfaceName, const VariantMap&, const std::vector<std::string>&) {
-          if (interfaceName == kDeviceInterface || interfaceName == kStationInterface || interfaceName == kNetworkInterface
+          if (interfaceName == kDeviceInterface
+              || interfaceName == kStationInterface
+              || interfaceName == kNetworkInterface
               || interfaceName == kKnownNetworkInterface) {
             refresh();
           }
