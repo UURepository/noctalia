@@ -1,12 +1,10 @@
 #include "dbus/network/iwd_service.h"
 
 #include "core/log.h"
-#include "core/process.h"
 #include "dbus/system_bus.h"
 #include "system/rfkill_helper.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -54,12 +52,7 @@ namespace {
     return static_cast<std::uint8_t>(2 * (dBm + 100));
   }
 
-  std::uint8_t strengthFromValue(std::int16_t value) {
-    if (value >= 0 && value <= 100) {
-      return static_cast<std::uint8_t>(value);
-    }
-    return signalToPercent(value);
-  }
+  std::uint8_t signalFromIwdStrength(std::int16_t centiDbm) { return signalToPercent(centiDbm / 100); }
 
   std::optional<std::string> stringProp(const VariantMap& props, std::string_view name) {
     const auto it = props.find(std::string{name});
@@ -240,7 +233,7 @@ void IwdService::refresh() {
       const auto type = stringProp(networkIt->second, "Type").value_or("");
       const bool active = boolProp(networkIt->second, "Connected").value_or(false)
           || (!connectedNetworkPath.empty() && connectedNetworkPath == std::string(networkPath));
-      const std::uint8_t strength = strengthFromValue(signal);
+      const std::uint8_t strength = signalFromIwdStrength(signal);
 
       auto existing = std::ranges::find(aps, ssid, &AccessPointInfo::ssid);
       if (existing != aps.end()) {
@@ -308,23 +301,9 @@ bool IwdService::activateAccessPoint(const AccessPointInfo& ap) {
 }
 
 bool IwdService::activateAccessPoint(const AccessPointInfo& ap, const std::string& psk) {
-  if (psk.empty()) {
-    return activateAccessPoint(ap);
+  if (!psk.empty()) {
+    kLog.warn("IWD passphrase entry requires an IWD agent; refusing to pass secrets through process arguments");
   }
-
-  const auto ifnameIt = m_deviceNames.find(ap.devicePath);
-  if (ifnameIt != m_deviceNames.end() && process::commandExists("iwctl")) {
-    const auto result = process::runSyncWithTimeout(
-        {"iwctl", "--passphrase", psk.c_str(), "station", ifnameIt->second.c_str(), "connect", ap.ssid.c_str()},
-        std::chrono::seconds{20}
-    );
-    if (result) {
-      refresh();
-      return true;
-    }
-    kLog.warn("iwctl connect failed for {}: {}", ap.ssid, result.err.empty() ? result.out : result.err);
-  }
-
   return activateAccessPoint(ap);
 }
 
