@@ -712,6 +712,8 @@ void LockScreen::invalidatePendingAuthentication() {
 
 void LockScreen::handlePasswordEdited(const std::string& value) {
   if (m_authenticating) {
+    m_password = value;
+    updatePromptOnSurfaces();
     return;
   }
   if (m_password == value && m_status.empty() && !m_statusIsError) {
