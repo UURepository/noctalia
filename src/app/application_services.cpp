@@ -18,6 +18,7 @@
 #include "dbus/logind/logind_service.h"
 #include "dbus/mpris/mpris_service.h"
 #include "dbus/network/inetwork_service.h"
+#include "dbus/network/iwd_service.h"
 #include "dbus/network/network_manager_service.h"
 #include "dbus/network/network_secret_agent.h"
 #include "dbus/network/wpa_supplicant_service.h"
@@ -897,8 +898,26 @@ void Application::initSystemBusServices() {
         }
         kLog.info("network service active (wpa_supplicant)");
       } catch (const std::exception& e2) {
-        kLog.warn("network service disabled: {}", e2.what());
-        m_networkService.reset();
+        kLog.warn("wpa_supplicant unavailable ({}), trying iwd", e2.what());
+        try {
+          m_networkService = std::make_unique<IwdService>(*m_systemBus);
+          m_networkService->setChangeCallback(
+              [this, shouldRefreshControlCenter](const NetworkState& state, NetworkChangeOrigin origin) {
+                onNetworkStateChangedForEvents(state, origin);
+                m_bar.refresh();
+                if (shouldRefreshControlCenter()) {
+                  m_panelManager.refresh();
+                }
+              }
+          );
+          if (m_networkService->hasStateSnapshot()) {
+            m_prevWirelessEnabledForEvents = m_networkService->state().wirelessEnabled;
+          }
+          kLog.info("network service active (iwd)");
+        } catch (const std::exception& e3) {
+          kLog.warn("network service disabled: {}", e3.what());
+          m_networkService.reset();
+        }
       }
     }
 
