@@ -306,12 +306,23 @@ void IwdService::requestScan() {
 
 bool IwdService::activateAccessPoint(const AccessPointInfo& ap) {
   try {
-    auto network = sdbus::createProxy(m_bus.connection(), kIwdBusName, sdbus::ObjectPath{ap.path});
-    network->callMethod("Connect").onInterface(kNetworkInterface);
-    refresh();
+    // Starting a new connect supersedes any previous in-flight one.
+    m_connectProxy = sdbus::createProxy(m_bus.connection(), kIwdBusName, sdbus::ObjectPath{ap.path});
+    m_connectProxy->callMethodAsync("Connect")
+        .onInterface(kNetworkInterface)
+        .uponReplyInvoke([this, ssid = ap.ssid](std::optional<sdbus::Error> error) {
+          // consumed by the agent, or abandoned, never keep it around
+          m_pendingPsk.clear();
+          if (error) {
+            kLog.warn("Connect failed for {}: {}", ssid, error->what());
+          }
+          refresh();
+        });
+    // dispatched; real result arrives via the change callback
     return true;
   } catch (const sdbus::Error& e) {
-    kLog.warn("Connect failed for {}: {}", ap.ssid, e.what());
+    m_pendingPsk.clear();
+    kLog.warn("Connect dispatch failed for {}: {}", ap.ssid, e.what());
     return false;
   }
 }

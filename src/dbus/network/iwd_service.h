@@ -62,6 +62,7 @@ private:
   // station path -> device name.
   std::unordered_map<std::string, std::string> m_deviceNames;
   std::unordered_map<std::string, std::unique_ptr<sdbus::IProxy>> m_objectProxies;
+  std::unique_ptr<sdbus::IProxy> m_connectProxy; // keeps an in-flight async Connect alive
   IwdSecretAgent* m_secretAgent = nullptr;
   std::string m_pendingPsk;
   bool m_hasStateSnapshot = false;
