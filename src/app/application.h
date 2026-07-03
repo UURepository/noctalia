@@ -107,6 +107,7 @@ class BrightnessService;
 class DebugService;
 class EasyEffectsService;
 class INetworkService;
+class IwdSecretAgent;
 class LogindService;
 class MainLoop;
 class MprisService;
@@ -241,6 +242,7 @@ private:
   std::unique_ptr<PowerProfilesService> m_powerProfilesService;
   std::unique_ptr<INetworkService> m_networkService;
   std::unique_ptr<NetworkSecretAgent> m_networkSecretAgent;
+  std::unique_ptr<IwdSecretAgent> m_iwdSecretAgent;
   std::unique_ptr<BluetoothService> m_bluetoothService;
   std::unique_ptr<BluetoothAgent> m_bluetoothAgent;
   Timer m_bluetoothResumeTimer;

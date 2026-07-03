@@ -1,6 +1,7 @@
 #include "dbus/network/iwd_service.h"
 
 #include "core/log.h"
+#include "dbus/network/iwd_secret_agent.h"
 #include "dbus/system_bus.h"
 #include "system/rfkill_helper.h"
 
@@ -104,6 +105,21 @@ IwdService::IwdService(SystemBus& bus) : m_bus(bus) {
 IwdService::~IwdService() = default;
 
 void IwdService::setChangeCallback(ChangeCallback callback) { m_changeCallback = std::move(callback); }
+
+void IwdService::setSecretAgent(IwdSecretAgent* agent) {
+  m_secretAgent = agent;
+  if (m_secretAgent != nullptr) {
+    m_secretAgent->setRequestCallback([this](const IwdSecretAgent::SecretRequest& request) {
+      (void)request;
+      if (!m_pendingPsk.empty()) {
+        m_secretAgent->submitSecret(m_pendingPsk);
+        m_pendingPsk.clear();
+      } else {
+        m_secretAgent->cancelSecret();
+      }
+    });
+  }
+}
 
 void IwdService::subscribeObject(const std::string& path, const ObjectInterfaces& interfaces) {
   if (m_objectProxies.contains(path)) {
@@ -301,9 +317,15 @@ bool IwdService::activateAccessPoint(const AccessPointInfo& ap) {
 }
 
 bool IwdService::activateAccessPoint(const AccessPointInfo& ap, const std::string& psk) {
-  if (!psk.empty()) {
-    kLog.warn("IWD passphrase entry requires an IWD agent; refusing to pass secrets through process arguments");
+  if (psk.empty()) {
+    return activateAccessPoint(ap);
   }
+  if (m_secretAgent == nullptr) {
+    kLog.warn("IWD secret agent not available; cannot connect to secured network");
+    return false;
+  }
+  // Store the PSK for the agent to submit when RequestPassphrase is called
+  m_pendingPsk = psk;
   return activateAccessPoint(ap);
 }
 

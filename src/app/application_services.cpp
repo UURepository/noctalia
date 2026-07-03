@@ -18,6 +18,7 @@
 #include "dbus/logind/logind_service.h"
 #include "dbus/mpris/mpris_service.h"
 #include "dbus/network/inetwork_service.h"
+#include "dbus/network/iwd_secret_agent.h"
 #include "dbus/network/iwd_service.h"
 #include "dbus/network/network_manager_service.h"
 #include "dbus/network/network_secret_agent.h"
@@ -927,6 +928,17 @@ void Application::initSystemBusServices() {
       } catch (const std::exception& e) {
         kLog.warn("network secret agent disabled: {}", e.what());
         m_networkSecretAgent.reset();
+      }
+    }
+
+    // Initialize iwd secret agent if iwd is the active network service
+    if (auto* iwdService = dynamic_cast<IwdService*>(m_networkService.get())) {
+      try {
+        m_iwdSecretAgent = std::make_unique<IwdSecretAgent>(*m_systemBus);
+        iwdService->setSecretAgent(m_iwdSecretAgent.get());
+      } catch (const std::exception& e) {
+        kLog.warn("iwd secret agent disabled: {}", e.what());
+        m_iwdSecretAgent.reset();
       }
     }
 

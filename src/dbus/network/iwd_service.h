@@ -44,6 +44,8 @@ public:
   void forgetSsid(const std::string& ssid) override;
   [[nodiscard]] bool hasSavedConnection(const std::string& ssid) const override;
 
+  void setSecretAgent(class IwdSecretAgent* agent);
+
 private:
   void subscribeObject(
       const std::string& path, const std::map<std::string, std::map<std::string, sdbus::Variant>>& interfaces
@@ -60,6 +62,8 @@ private:
   // station path -> device name.
   std::unordered_map<std::string, std::string> m_deviceNames;
   std::unordered_map<std::string, std::unique_ptr<sdbus::IProxy>> m_objectProxies;
+  IwdSecretAgent* m_secretAgent = nullptr;
+  std::string m_pendingPsk;
   bool m_hasStateSnapshot = false;
   bool m_refreshInFlight = false;
   bool m_refreshQueued = false;
