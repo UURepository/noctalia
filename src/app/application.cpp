@@ -18,6 +18,7 @@
 #include "dbus/logind/logind_service.h"
 #include "dbus/mpris/mpris_service.h"
 #include "dbus/network/inetwork_service.h"
+#include "dbus/network/iwd_secret_agent.h"
 #include "dbus/network/network_manager_service.h"
 #include "dbus/network/network_secret_agent.h"
 #include "dbus/network/wpa_supplicant_service.h"
